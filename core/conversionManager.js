@@ -4,31 +4,34 @@ const path = require('path');
 const { spawn } = require('child_process');
 
 const PLATFORM = process.platform;
-const APP_ROOT = path.resolve(__dirname, '..');
-const BUNDLED_RESOURCES_ROOT = process.resourcesPath || APP_ROOT;
+const DEV_ROOT = path.resolve(__dirname, '..');
+const DEV_ENGINES_ROOT = path.join(DEV_ROOT, 'engines');
+const PROD_ENGINES_ROOT = process.resourcesPath
+    ? path.join(process.resourcesPath, 'engines')
+    : DEV_ENGINES_ROOT;
+const IS_PACKAGED = process.env.NODE_ENV === 'production' || process.defaultApp === false;
 
-function getEngineCandidatePath(...segments) {
-    const devPath = path.join(APP_ROOT, ...segments);
-    const packagedPath = path.join(BUNDLED_RESOURCES_ROOT, ...segments);
+function getEngineCandidatePaths(...segments) {
+    const relativeEnginePath = path.join(...segments);
+    const devPath = path.join(DEV_ENGINES_ROOT, relativeEnginePath);
+    const packagedPath = path.join(PROD_ENGINES_ROOT, relativeEnginePath);
 
-    if (process.env.NODE_ENV === 'production' || process.defaultApp === false) {
-        return packagedPath;
-    }
-
-    return devPath;
+    return IS_PACKAGED
+        ? [packagedPath, devPath]
+        : [devPath, packagedPath];
 }
 
 const ENGINE_DEFINITIONS = {
     ffmpeg: {
         probeArgs: ['-version'],
         candidates: PLATFORM === 'win32'
-            ? [getEngineCandidatePath('engines', 'ffmpeg.exe'), 'ffmpeg.exe', 'ffmpeg']
+            ? [...getEngineCandidatePaths('ffmpeg.exe'), 'ffmpeg.exe', 'ffmpeg']
             : ['ffmpeg', '/opt/homebrew/bin/ffmpeg', '/usr/local/bin/ffmpeg', '/usr/bin/ffmpeg']
     },
     libreoffice: {
         probeArgs: ['--version'],
         candidates: PLATFORM === 'win32'
-            ? [getEngineCandidatePath('engines', 'libreoffice', 'program', 'soffice.exe'), 'soffice.exe', 'soffice']
+            ? [...getEngineCandidatePaths('libreoffice', 'program', 'soffice.exe'), 'soffice.exe', 'soffice']
             : PLATFORM === 'darwin'
                 ? [
                     '/Applications/LibreOffice.app/Contents/MacOS/soffice',
@@ -42,7 +45,7 @@ const ENGINE_DEFINITIONS = {
     '7zip': {
         probeArgs: ['--help'],
         candidates: PLATFORM === 'win32'
-            ? [getEngineCandidatePath('engines', '7zip', '7za.exe'), '7za.exe', '7z.exe']
+            ? [...getEngineCandidatePaths('7zip', '7za.exe'), '7za.exe', '7z.exe']
             : ['7z', '7za', '/usr/bin/7z', '/usr/local/bin/7z', '/opt/homebrew/bin/7z']
     }
 };
@@ -218,7 +221,9 @@ async function getEngineStatus() {
     }));
 
     return {
+        isPackaged: IS_PACKAGED,
         platform: PLATFORM,
+        engineRoot: IS_PACKAGED ? PROD_ENGINES_ROOT : DEV_ENGINES_ROOT,
         engines: Object.fromEntries(entries)
     };
 }
