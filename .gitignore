@@ -1,0 +1,146 @@
+# =========================
+
+# ConvertHub v2 .gitignore
+
+# =========================
+
+# -------------------------
+
+# Node / Electron
+
+# -------------------------
+
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Keep lock file for stable builds
+
+# (recommended for apps)
+
+# package-lock.json
+
+# -------------------------
+
+# Build / Distribution
+
+# -------------------------
+
+dist/
+build/
+out/
+release/
+
+# -------------------------
+
+# OS Files
+
+# -------------------------
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# -------------------------
+
+# Logs
+
+# -------------------------
+
+logs/
+*.log
+
+# -------------------------
+
+# Environment Files
+
+# -------------------------
+
+.env
+.env.*
+
+# -------------------------
+
+# IDE / Editor
+
+# -------------------------
+
+.vscode/
+.idea/
+
+# -------------------------
+
+# Runtime App Data (DO NOT TRACK)
+
+# -------------------------
+
+Data/settings/cache/
+Data/settings/crash/
+Data/settings/updates/
+Data/settings/user/
+
+# -------------------------
+
+# Temporary / Cache Files
+
+# -------------------------
+
+*.tmp
+*.cache
+.cache/
+.electron/
+
+# -------------------------
+
+# Packaging / Installer Artifacts
+
+# -------------------------
+
+*.exe
+*.msi
+*.dmg
+*.AppImage
+*.deb
+*.rpm
+
+# -------------------------
+
+# Large Archive Files (avoid accidental commits)
+
+# -------------------------
+
+*.zip
+*.tar
+*.tar.gz
+*.tar.xz
+*.7z
+
+# -------------------------
+
+# System / Binary Dumps (safety)
+
+# -------------------------
+
+*.iso
+*.img
+*.bin
+
+# -------------------------
+
+# IMPORTANT: KEEP ENGINES
+
+# -------------------------
+
+# We intentionally DO NOT ignore:
+
+# engines/ (ffmpeg, libreoffice, 7zip binaries)
+
+# -------------------------
+
+# Optional: Ignore test outputs
+
+# -------------------------
+
+test-output/
+coverage/

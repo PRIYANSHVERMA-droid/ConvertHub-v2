@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ConvertHub v2</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body data-theme="dark">
+    <!-- Animated Background Blobs -->
+    <div class="background-container">
+        <div class="glow-blob blob-1"></div>
+        <div class="glow-blob blob-2"></div>
+        <div class="glow-blob blob-3"></div>
+        <div class="stars"></div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- App Container (Glassmorphism layer) -->
+    <div class="app-container">
+        
+        <!-- Header (Draggable) -->
+        <header class="top-header">
+            <div class="logo">
+                <i class="fa-solid fa-bolt text-gradient"></i>
+                <h2>ConvertHub <span>v2</span></h2>
+            </div>
+            <div class="titlebar-fill" aria-hidden="true"></div>
+            
+            <div class="header-actions">
+                <button id="theme-toggle" class="icon-btn no-drag" title="Toggle theme"><i class="fa-solid fa-moon"></i></button>
+                <button id="settings-toggle" class="icon-btn no-drag" title="Settings"><i class="fa-solid fa-gear"></i></button>
+                <button id="notifications-toggle" class="icon-btn no-drag notification-trigger" title="Notifications">
+                    <i class="fa-regular fa-bell"></i>
+                    <span class="notification-badge hidden" id="notification-badge">0</span>
+                </button>
+                <div class="window-controls no-drag">
+                    <button class="win-btn no-drag" id="win-min" type="button"><i class="fa-solid fa-minus"></i></button>
+                    <button class="win-btn no-drag" id="win-max" type="button"><i class="fa-regular fa-square"></i></button>
+                    <button class="win-btn close no-drag" id="win-close" type="button"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Layout Split -->
+        <div class="layout-grid">
+            
+            <!-- Main Area (Left) -->
+            <main class="main-area">
+                
+                <!-- Upload Zone -->
+                <div class="upload-zone no-drag" id="upload-zone">
+                    <input type="file" id="file-input" multiple style="display: none;">
+                    <div class="upload-content">
+                        <i class="fa-solid fa-cloud-arrow-up cloud-icon"></i>
+                        <h3>Drop files here</h3>
+                        <p>or click to browse &bull; supports multiple files</p>
+                    </div>
+                    <div class="upload-glow"></div>
+                </div>
+
+                <!-- Conversion Type -->
+                <section class="conversion-type">
+                    <h4>Select Conversion Type</h4>
+                    <div class="type-cards">
+                        <div class="type-card active no-drag" data-type="audio">
+                            <div class="icon-wrapper audio"><i class="fa-solid fa-music"></i></div>
+                            <span>Audio</span>
+                        </div>
+                        <div class="type-card no-drag" data-type="video">
+                            <div class="icon-wrapper video"><i class="fa-solid fa-film"></i></div>
+                            <span>Video</span>
+                        </div>
+                        <div class="type-card no-drag" data-type="image">
+                            <div class="icon-wrapper image"><i class="fa-regular fa-image"></i></div>
+                            <span>Image</span>
+                        </div>
+                        <div class="type-card no-drag" data-type="document">
+                            <div class="icon-wrapper document"><i class="fa-regular fa-file-lines"></i></div>
+                            <span>Document</span>
+                        </div>
+                        <div class="type-card no-drag" data-type="archive">
+                            <div class="icon-wrapper archive"><i class="fa-regular fa-file-zipper"></i></div>
+                            <span>Archive</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Queue -->
+                <section class="queue-section">
+                    <div class="queue-header">
+                        <h4>Conversion Queue <span class="queue-count" id="queue-count"></span></h4>
+                        <button class="clear-btn no-drag" id="clear-queue-btn"><i class="fa-solid fa-trash-can"></i> Clear Queue</button>
+                    </div>
+                    <div class="batch-status hidden" id="batch-status">
+                        <div class="batch-status-copy">
+                            <span class="batch-status-title" id="batch-status-title">Batch progress</span>
+                            <span class="batch-status-meta" id="batch-status-meta">0 completed • 0 remaining</span>
+                        </div>
+                        <div class="batch-progress-bar">
+                            <div class="batch-progress-fill" id="batch-progress-fill"></div>
+                        </div>
+                    </div>
+                    <div class="queue-list" id="queue-list">
+                        <div class="queue-empty" id="queue-empty">
+                            <i class="fa-regular fa-folder-open"></i>
+                            <p>No files in queue. Drop files above to get started.</p>
+                        </div>
+                    </div>
+                </section>
+
+            </main>
+
+            <!-- Sidebar (Right) -->
+            <aside class="sidebar">
+                
+                <!-- Recent Files -->
+                <section class="sidebar-section recent-files-section">
+                    <h4>Recent Conversions</h4>
+                    <div class="recent-list" id="recent-list">
+                        <!-- Recent items loaded from localStorage -->
+                    </div>
+                    <button class="outline-btn no-drag" id="clear-recent-btn">Clear All</button>
+                </section>
+
+                <!-- Output Settings -->
+                <section class="sidebar-section settings-section">
+                    <h4>Output Settings</h4>
+                    <div class="settings-scope-row">
+                        <p class="settings-scope-label" id="output-scope-label">Editing: Audio group</p>
+                        <button id="reset-file-override-btn" class="outline-btn no-drag scope-reset-btn hidden">Use Group Default</button>
+                    </div>
+                    <div class="settings-form-scroll">
+                        <div class="form-group">
+                            <label>Preset:</label>
+                            <select id="preset-select" class="glass-input no-drag">
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Format:</label>
+                            <select id="output-format" class="glass-input no-drag">
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+                        
+                        <div class="form-group quality-group">
+                            <label>Quality: <span id="quality-value" class="quality-value">80%</span></label>
+                            <input type="range" min="1" max="100" value="80" class="glass-slider no-drag" id="quality-slider">
+                            <div class="slider-labels">
+                                <span>Low</span>
+                                <span>Medium</span>
+                                <span>High</span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group folder-group">
+                            <label>Output Folder</label>
+                            <div class="folder-input-wrapper">
+                                <input type="text" id="output-folder-input" readonly class="glass-input" placeholder="Same as source">
+                                <button class="icon-btn-small no-drag" id="pick-folder-btn" title="Browse folder"><i class="fa-regular fa-folder"></i></button>
+                                <button class="icon-btn-small no-drag" id="open-folder-btn" title="Open folder"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
+                            </div>
+                            <p class="settings-help">If a matching file name already exists, ConvertHub saves a numbered copy instead of overwriting it.</p>
+                        </div>
+                    </div>
+
+                    <div class="settings-footer-bar">
+                        <button id="convert-btn" class="primary-btn glow-btn no-drag">
+                            <i class="fa-solid fa-play"></i> Start Conversion
+                        </button>
+                    </div>
+                </section>
+
+            </aside>
+        </div>
+
+        <div class="settings-overlay hidden" id="settings-overlay">
+            <section class="settings-page no-drag" aria-labelledby="settings-title">
+                <div class="settings-page-header">
+                    <div>
+                        <p class="settings-eyebrow">Preferences</p>
+                        <h3 id="settings-title">Settings</h3>
+                        <p class="settings-description">Tune the app once and keep those defaults across sessions.</p>
+                    </div>
+                    <button id="settings-close" class="icon-btn settings-close-btn" title="Close settings">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <div class="settings-page-grid">
+                    <section class="settings-card">
+                        <h4>Appearance</h4>
+                        <div class="settings-field">
+                            <label for="settings-theme">Theme</label>
+                            <select id="settings-theme" class="glass-input no-drag">
+                                <option value="dark">Dark</option>
+                                <option value="light">Light</option>
+                            </select>
+                        </div>
+                        <label class="toggle-row" for="settings-show-toasts">
+                            <div>
+                                <span class="toggle-title">Toast notifications</span>
+                                <span class="toggle-copy">Keep in-app success and status popups enabled.</span>
+                            </div>
+                            <input id="settings-show-toasts" type="checkbox" checked>
+                        </label>
+                    </section>
+
+                    <section class="settings-card">
+                        <h4>Conversion Defaults</h4>
+                        <label class="toggle-row" for="settings-auto-detect-type">
+                            <div>
+                                <span class="toggle-title">Auto-detect file type</span>
+                                <span class="toggle-copy">Switch the conversion card automatically when the first file is added.</span>
+                            </div>
+                            <input id="settings-auto-detect-type" type="checkbox" checked>
+                        </label>
+                        <div class="settings-field">
+                            <label for="settings-default-quality">Default quality</label>
+                            <div class="settings-inline">
+                                <input type="range" min="1" max="100" value="80" class="glass-slider no-drag" id="settings-default-quality">
+                                <span id="settings-default-quality-value" class="quality-pill">80%</span>
+                            </div>
+                        </div>
+                        <label class="toggle-row" for="settings-open-folder-on-complete">
+                            <div>
+                                <span class="toggle-title">Open output folder after success</span>
+                                <span class="toggle-copy">Open the destination folder automatically after each successful conversion.</span>
+                            </div>
+                            <input id="settings-open-folder-on-complete" type="checkbox">
+                        </label>
+                    </section>
+
+                    <section class="settings-card settings-card-wide">
+                        <h4>Output</h4>
+                        <div class="settings-field">
+                            <label for="settings-default-output-folder">Default output folder</label>
+                            <div class="folder-input-wrapper">
+                                <input type="text" id="settings-default-output-folder" readonly class="glass-input" placeholder="Use Downloads">
+                                <button class="icon-btn-small no-drag" id="settings-pick-folder-btn" title="Browse folder"><i class="fa-regular fa-folder"></i></button>
+                                <button class="icon-btn-small no-drag" id="settings-open-folder-btn" title="Open folder"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
+                            </div>
+                            <p class="settings-help">This becomes the starting folder shown in the main output settings.</p>
+                        </div>
+                    </section>
+
+                    <section class="settings-card settings-card-wide">
+                        <h4>Environment</h4>
+                        <div class="about-grid">
+                            <div class="about-stat">
+                                <span class="about-label">Platform</span>
+                                <strong id="environment-platform">Platform: detecting...</strong>
+                            </div>
+                            <div class="about-stat">
+                                <span class="about-label">Engines</span>
+                                <strong id="environment-engines">Checking local converters...</strong>
+                            </div>
+                        </div>
+                        <p class="settings-help" id="environment-support">Support status: checking local converter tools.</p>
+                    </section>
+
+                    <section class="settings-card settings-card-wide about-card">
+                        <div class="about-header">
+                            <div>
+                                <p class="settings-eyebrow">About</p>
+                                <h4>About ConvertHub</h4>
+                            </div>
+                            <div class="about-version-pill">v1.0.0</div>
+                        </div>
+
+                        <p class="about-copy">
+                            ConvertHub is a desktop conversion workspace for audio, video, images, documents, and archives,
+                            built to keep batch conversion simple without leaving your machine.
+                        </p>
+
+                        <div class="about-grid">
+                            <div class="about-stat">
+                                <span class="about-label">App</span>
+                                <strong>ConvertHub v2</strong>
+                            </div>
+                            <div class="about-stat">
+                                <span class="about-label">Created By</span>
+                                <strong>Priyansh Verma</strong>
+                            </div>
+                            <div class="about-stat">
+                                <span class="about-label">GitHub</span>
+                                <strong>
+                                    <a class="about-link" href="https://github.com/PRIYANSHVERMA-droid" target="_blank" rel="noreferrer">
+                                        @PRIYANSHVERMA-droid
+                                    </a>
+                                </strong>
+                            </div>
+                            <div class="about-stat">
+                                <span class="about-label">Runtime</span>
+                                <strong>Electron 41</strong>
+                            </div>
+                            <div class="about-stat">
+                                <span class="about-label">Package</span>
+                                <strong>converthub-v2</strong>
+                            </div>
+                            <div class="about-stat">
+                                <span class="about-label">License</span>
+                                <strong>ISC</strong>
+                            </div>
+                        </div>
+
+                        <div class="about-highlights">
+                            <div class="about-highlight">
+                                <i class="fa-solid fa-layer-group"></i>
+                                <span>Batch queue management with live progress tracking</span>
+                            </div>
+                            <div class="about-highlight">
+                                <i class="fa-solid fa-sliders"></i>
+                                <span>Saved defaults for theme, output quality, folders, and behavior</span>
+                            </div>
+                            <div class="about-highlight">
+                                <i class="fa-regular fa-bell"></i>
+                                <span>Built-in notification history for conversion and app activity</span>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="settings-footer">
+                    <button id="settings-reset" class="outline-btn no-drag">Reset Defaults</button>
+                    <button id="settings-save" class="primary-btn glow-btn no-drag settings-save-btn">
+                        <i class="fa-solid fa-floppy-disk"></i> Save Settings
+                    </button>
+                </div>
+            </section>
+        </div>
+
+        <div class="settings-overlay hidden" id="notifications-overlay">
+            <section class="settings-page notifications-page no-drag" aria-labelledby="notifications-title">
+                <div class="settings-page-header">
+                    <div>
+                        <p class="settings-eyebrow">Activity</p>
+                        <h3 id="notifications-title">Notifications</h3>
+                        <p class="settings-description">Track queue updates, conversion results, and app activity in one place.</p>
+                    </div>
+                    <button id="notifications-close" class="icon-btn settings-close-btn" title="Close notifications">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <div class="notifications-toolbar">
+                    <button id="notifications-mark-read" class="outline-btn no-drag">Mark All Read</button>
+                    <button id="notifications-clear" class="outline-btn no-drag">Clear Notifications</button>
+                </div>
+
+                <div class="notifications-list" id="notifications-list">
+                    <div class="notifications-empty" id="notifications-empty">
+                        <i class="fa-regular fa-bell-slash"></i>
+                        <p>No notifications yet. Activity will show up here as you use the app.</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
