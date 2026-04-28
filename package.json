@@ -1,50 +1,73 @@
 {
-  "name": "converthub-v2",
-  "version": "1.0.0",
-  "description": "",
-  "main": "main.js",
-  "scripts": {
-    "start": "electron .",
-    "dev": "electron .",
-    "build": "electron-builder",
-    "dist": "electron-builder --win --x64"
-  },
-  "keywords": [],
-  "author": "Priyansh Verma",
-  "license": "ISC",
-  "type": "commonjs",
-  "devDependencies": {
-    "electron": "^41.3.0",
-    "electron-builder": "^26.8.1"
-  },
-  "build": {
-    "appId": "com.converthub.v2",
-    "productName": "ConvertHub v2",
-    "npmRebuild": false,
-    "directories": {
-      "output": "dist"
-    },
-    "files": [
-      "assets/**/*",
-      "core/**/*",
-      "ui/**/*",
-      "main.js",
-      "preload.js",
-      "package.json",
-      "!node_modules/.cache/**/*"
-    ],
-    "extraResources": [
-      {
-        "from": "engines",
-        "to": "engines",
-        "filter": [
-          "**/*"
-        ]
-      }
-    ],
-    "win": {
-      "target": "nsis",
-      "icon": "assets/app-icon.ico"
-    }
+"name": "converthub-v2",
+"version": "1.0.0",
+"description": "ConvertHub v2 - Universal File Converter",
+"main": "main.js",
+"author": "Priyansh Verma",
+"license": "ISC",
+"type": "commonjs",
+
+"scripts": {
+"start": "electron .",
+"dev": "electron .",
+"build": "electron-builder",
+"dist": "electron-builder --win --x64"
+},
+
+"devDependencies": {
+"electron": "^41.3.0",
+"electron-builder": "^26.8.1"
+},
+
+"build": {
+"appId": "com.converthub.v2",
+"productName": "ConvertHub v2",
+"artifactName": "ConvertHub-v2-Setup-${version}.${ext}",
+
+
+"npmRebuild": false,
+
+"directories": {
+  "output": "dist"
+},
+
+"files": [
+  "assets/**/*",
+  "core/**/*",
+  "ui/**/*",
+  "main.js",
+  "preload.js",
+  "package.json",
+  "!node_modules/.cache/**/*"
+],
+
+"extraResources": [
+  {
+    "from": "engines",
+    "to": "engines",
+    "filter": ["**/*"]
   }
+],
+
+"win": {
+  "target": "nsis",
+  "icon": "assets/app-icon.ico"
+},
+
+"nsis": {
+  "oneClick": false,
+  "allowToChangeInstallationDirectory": true,
+  "perMachine": false,
+
+  "createDesktopShortcut": true,
+  "createStartMenuShortcut": true,
+  "shortcutName": "ConvertHub v2",
+
+  "artifactName": "ConvertHub-v2-Installer-${version}.${ext}"
+},
+
+"compression": "maximum"
+
+
+}
 }
