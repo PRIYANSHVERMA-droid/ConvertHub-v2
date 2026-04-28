@@ -200,8 +200,6 @@ ConvertHub v2
 ## 🔮 Future Improvements
 
 - Cross-platform support (Linux / macOS)  
-- Advanced batch processing  
-- Smarter GPU utilization  
 - Auto-updater improvements  
 - Performance tuning  
 
