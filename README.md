@@ -1,16 +1,14 @@
 <p align="center">
-  <img src="assets/screenshots/icon.png" width="140">
+  <img src="https://raw.githubusercontent.com/PRIYANSHVERMA-droid/ConvertHub-v2/main/assets/screenshots/icon.png" width="120">
 </p>
 
-# ⚡ ConvertHub v2
+<h1 align="center">⚡ ConvertHub v2</h1>
 
 <p align="center">
-
-![License](https://img.shields.io/badge/license-MIT-blue)  
-![Platform](https://img.shields.io/badge/platform-Windows-blue)  
-![Version](https://img.shields.io/badge/version-2.0-orange)  
-![Built With](https://img.shields.io/badge/built%20with-Electron-purple)
-
+  <img src="https://img.shields.io/badge/license-MIT-blue">
+  <img src="https://img.shields.io/badge/platform-Windows-blue">
+  <img src="https://img.shields.io/badge/version-2.0-green">
+  <img src="https://img.shields.io/badge/built%20with-Electron-purple">
 </p>
 
 <p align="center">
@@ -23,59 +21,36 @@
 
 ## 🚀 Overview
 
-**ConvertHub v2** is a modern desktop file converter focused on clean UI, curated formats, and efficient performance.
+ConvertHub v2 is a modern desktop file converter focused on clean UI, curated formats, and high-performance processing.
 
-It integrates powerful engines:
-
-- **FFmpeg** → audio & video conversion  
-- **LibreOffice** → document conversion  
-- **7-Zip** → archive handling  
-
-All engines are bundled — no additional installation required.
+It integrates powerful engines like **FFmpeg**, **LibreOffice**, and **7-Zip** to handle multiple file types in one unified application — without requiring external installations.
 
 ---
 
 ## 🖥 Preview
 
 <p align="center">
-  <img src="assets/screenshots/ui.png" width="900">
+  <img src="https://raw.githubusercontent.com/PRIYANSHVERMA-droid/ConvertHub-v2/main/assets/screenshots/ui.png" width="850">
 </p>
 
 ---
 
-## ✨ Features
+## 🔥 Features
 
-- ⚡ Smart format selection (no unnecessary clutter)  
-- ⚡ Built-in conversion presets  
-- ⚡ Drag & drop file support  
-- ⚡ Conversion queue system  
-- ⚡ Glassmorphism UI (Dark / Light mode)  
-- ⚡ GPU-accelerated video encoding (NVENC / QSV supported)  
-- ⚡ Optimized conversion pipeline  
-- ⚡ Built-in engines (no external setup required)  
+- 🎵 Audio conversion (MP3, WAV, AAC, FLAC)
+- 🎬 Video conversion (MP4, MKV, MOV, AVI)
+- 🖼 Image conversion (JPG, PNG, WEBP)
+- 📄 Document conversion via LibreOffice
+- 📦 Archive compression & extraction via 7-Zip
 
----
-
-## 🎯 Supported Formats (Curated)
-
-### 🎵 Audio
-MP3, WAV, AAC, FLAC, OGG, WMA, M4A  
-
-### 🎬 Video
-MP4, AVI, MKV, MOV, WEBM, FLV, WMV  
-
-### 🖼 Images
-JPG, JPEG, PNG, WEBP, BMP, TIFF, ICO, GIF  
-
-### 📄 Documents
-PDF, DOCX, TXT, ODT, RTF, HTML, XLSX, PPTX  
-
-### 📦 Archives
-ZIP, 7Z, TAR, GZ  
+- ⚡ GPU-accelerated encoding (when supported)
+- ⚡ Built-in conversion presets
+- ⚡ Conversion queue system
+- ⚡ Fully bundled engines (no setup required)
 
 ---
 
-## ⚡ Conversion Presets
+## 🎯 Presets
 
 ### 🎵 Audio
 - Balanced MP3  
@@ -85,7 +60,7 @@ ZIP, 7Z, TAR, GZ
 ### 🎬 Video
 - Balanced MP4  
 - High Quality MP4  
-- WebM (web optimized)  
+- Web Optimized (WebM)  
 
 ### 🖼 Images
 - JPEG Balanced  
@@ -99,8 +74,8 @@ ZIP, 7Z, TAR, GZ
 - Plain Text  
 
 ### 📦 Archives
-- ZIP (compatible)  
-- 7Z (smaller size)  
+- ZIP Compatible  
+- 7Z Smaller Size  
 
 ---
 
@@ -108,9 +83,9 @@ ZIP, 7Z, TAR, GZ
 
 - **Electron** – Desktop framework  
 - **Node.js** – Backend runtime  
-- **FFmpeg** – Media conversion (GPU supported)  
+- **FFmpeg** – Media processing  
 - **LibreOffice** – Document conversion  
-- **7-Zip** – Archive engine  
+- **7-Zip** – Archive engine
 
 ---
 
