@@ -127,6 +127,7 @@ https://github.com/PRIYANSHVERMA-droid/ConvertHub-v2/releases
 
 ## 📁 Project Structure
 
+```
 ConvertHub v2
 │
 ├ assets
@@ -181,6 +182,7 @@ ConvertHub v2
 ├ LICENSE
 ├ .gitignore
 └ .gitattributes
+```
 
 
 ---
