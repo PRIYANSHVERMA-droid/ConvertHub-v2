@@ -111,6 +111,151 @@ const ENGINE_CONCURRENCY_LIMITS = {
     libreoffice: 1,
     '7zip': 2
 };
+const CONVERSION_CANCELLED_CODE = 'CONVERSION_CANCELLED';
+const activeCancellationControllers = new Set();
+let cancellationControllerCounter = 0;
+
+function createCancellationError(message = 'Conversion stopped.') {
+    const error = new Error(message);
+    error.code = CONVERSION_CANCELLED_CODE;
+    error.cancelled = true;
+    return error;
+}
+
+function isCancellationError(error) {
+    return error?.code === CONVERSION_CANCELLED_CODE || error?.cancelled === true;
+}
+
+function throwIfCancelled(controller) {
+    if (controller?.cancelled) {
+        throw createCancellationError(controller.cancelReason || 'Conversion stopped.');
+    }
+}
+
+function terminateChildProcess(proc) {
+    if (!proc || proc.killed) {
+        return;
+    }
+
+    try {
+        if (PLATFORM === 'win32' && Number.isInteger(proc.pid) && proc.pid > 0) {
+            const killer = spawn('taskkill', ['/PID', String(proc.pid), '/T', '/F'], {
+                windowsHide: true,
+                stdio: 'ignore'
+            });
+            killer.unref();
+            return;
+        }
+
+        proc.kill('SIGTERM');
+        setTimeout(() => {
+            if (!proc.killed) {
+                try {
+                    proc.kill('SIGKILL');
+                } catch {
+                    // Ignore follow-up termination failures.
+                }
+            }
+        }, 400).unref?.();
+    } catch {
+        // Ignore termination failures during cancellation cleanup.
+    }
+}
+
+function createCancellationController(label = 'conversion') {
+    return {
+        id: `conversion-${++cancellationControllerCounter}`,
+        label,
+        cancelled: false,
+        cancelReason: 'Conversion stopped.',
+        activeProcesses: new Set(),
+        listeners: new Set()
+    };
+}
+
+function activateCancellationController(controller) {
+    if (controller) {
+        activeCancellationControllers.add(controller);
+    }
+    return controller;
+}
+
+function releaseCancellationController(controller) {
+    if (controller) {
+        activeCancellationControllers.delete(controller);
+    }
+}
+
+function onCancellation(controller, listener) {
+    if (!controller || typeof listener !== 'function') {
+        return () => {};
+    }
+
+    if (controller.cancelled) {
+        listener(controller.cancelReason);
+        return () => {};
+    }
+
+    controller.listeners.add(listener);
+    return () => controller.listeners.delete(listener);
+}
+
+function cancelController(controller, reason = 'Conversion stopped.') {
+    if (!controller || controller.cancelled) {
+        return false;
+    }
+
+    controller.cancelled = true;
+    controller.cancelReason = reason;
+
+    for (const listener of [...controller.listeners]) {
+        try {
+            listener(reason);
+        } catch {
+            // Ignore listener errors during cancellation.
+        }
+    }
+
+    controller.listeners.clear();
+
+    for (const proc of [...controller.activeProcesses]) {
+        terminateChildProcess(proc);
+    }
+
+    return true;
+}
+
+function cancelActiveConversions(reason = 'Conversion stopped.') {
+    let cancelledCount = 0;
+
+    for (const controller of [...activeCancellationControllers]) {
+        if (cancelController(controller, reason)) {
+            cancelledCount += 1;
+        }
+    }
+
+    return {
+        success: cancelledCount > 0,
+        cancelledCount
+    };
+}
+
+function registerActiveProcess(controller, proc) {
+    if (!controller || !proc) {
+        return () => {};
+    }
+
+    controller.activeProcesses.add(proc);
+    const cleanup = () => controller.activeProcesses.delete(proc);
+    proc.once('close', cleanup);
+    proc.once('exit', cleanup);
+
+    if (controller.cancelled) {
+        terminateChildProcess(proc);
+    }
+
+    return cleanup;
+}
 
 async function pathExists(targetPath) {
     try {
@@ -609,8 +754,10 @@ function createProgressReporter(onProgress, minIntervalMs = 120) {
     };
 }
 
-function runFFmpegConversionAttempt({ ffmpegPath, inputPath, outputPath, codecArgs, qualityArgs, imageFrameArgs, onProgress }) {
+function runFFmpegConversionAttempt({ ffmpegPath, inputPath, outputPath, codecArgs, qualityArgs, imageFrameArgs, onProgress, controller }) {
     return new Promise((resolve, reject) => {
+        throwIfCancelled(controller);
+
         const args = [
             '-y',
             '-i',
@@ -625,6 +772,7 @@ function runFFmpegConversionAttempt({ ffmpegPath, inputPath, outputPath, codecAr
         let totalDuration = 0;
 
         const proc = spawn(ffmpegPath, args, { windowsHide: true });
+        registerActiveProcess(controller, proc);
 
         proc.stderr.on('data', (chunk) => {
             const msg = chunk.toString();
@@ -644,12 +792,23 @@ function runFFmpegConversionAttempt({ ffmpegPath, inputPath, outputPath, codecAr
         });
 
         proc.on('error', (error) => {
+            if (controller?.cancelled) {
+                reject(createCancellationError(controller.cancelReason));
+                return;
+            }
+
             reject(new Error(error.code === 'ENOENT'
                 ? `ffmpeg not found at: ${ffmpegPath}`
                 : `Failed to start ffmpeg: ${error.message}`));
         });
 
         proc.on('close', async (code) => {
+            if (controller?.cancelled) {
+                await deleteFileIfExists(outputPath);
+                reject(createCancellationError(controller.cancelReason));
+                return;
+            }
+
             if (code !== 0) {
                 const trimmed = stderrOutput.trim().split('\n').pop() || `ffmpeg exited with code ${code}`;
                 return reject(new Error(trimmed));
@@ -664,9 +823,12 @@ function runFFmpegConversionAttempt({ ffmpegPath, inputPath, outputPath, codecAr
     });
 }
 
-function runProcess(executable, args, { onStdout, onStderr } = {}) {
+function runProcess(executable, args, { onStdout, onStderr, controller } = {}) {
     return new Promise((resolve, reject) => {
+        throwIfCancelled(controller);
+
         const proc = spawn(executable, args, { windowsHide: true });
+        registerActiveProcess(controller, proc);
         let stdout = '';
         let stderr = '';
 
@@ -682,63 +844,88 @@ function runProcess(executable, args, { onStdout, onStderr } = {}) {
             if (onStderr) onStderr(text);
         });
 
-        proc.on('error', reject);
-        proc.on('close', (code) => resolve({ code, stdout, stderr }));
+        proc.on('error', (error) => {
+            if (controller?.cancelled) {
+                reject(createCancellationError(controller.cancelReason));
+                return;
+            }
+            reject(error);
+        });
+        proc.on('close', (code) => {
+            if (controller?.cancelled) {
+                reject(createCancellationError(controller.cancelReason));
+                return;
+            }
+            resolve({ code, stdout, stderr });
+        });
     });
 }
 
-function convertWithFFmpeg({ inputPath, outputPath, format, type, quality, onProgress }) {
+function convertWithFFmpeg({ inputPath, outputPath, format, type, quality, onProgress, controller }) {
     return new Promise(async (resolve, reject) => {
-        const ffmpegPath = await resolveExecutable('ffmpeg');
-        if (!ffmpegPath) {
-            return reject(new Error('ffmpeg not found at: ffmpeg'));
-        }
+        try {
+            throwIfCancelled(controller);
 
-        const normalizedFormat = normalizeFormat(format);
-        const desiredOutput = path.format({
-            dir: path.dirname(outputPath),
-            name: path.parse(outputPath).name,
-            ext: `.${normalizedFormat}`
-        });
-        const finalOutput = await createUniqueOutputPath(desiredOutput);
-
-        const imageFrameArgs = type === 'image' && normalizedFormat !== 'gif' ? ['-frames:v', '1'] : [];
-        const plans = await getFFmpegPlans(type, normalizedFormat, quality);
-        const reportProgress = createProgressReporter(onProgress);
-        let lastError = null;
-
-        for (const plan of plans) {
-            await deleteFileIfExists(finalOutput);
-
-            try {
-                await runFFmpegConversionAttempt({
-                    ffmpegPath,
-                    inputPath,
-                    outputPath: finalOutput,
-                    codecArgs: plan.codecArgs,
-                    qualityArgs: plan.qualityArgs,
-                    imageFrameArgs,
-                    onProgress: reportProgress
-                });
-
-                reportProgress(100);
-                return resolve({
-                    success: true,
-                    outputPath: finalOutput,
-                    format: normalizedFormat,
-                    hardwareAccelerated: Boolean(plan.isHardwareAccelerated),
-                    encoder: plan.encoder || null
-                });
-            } catch (error) {
-                lastError = new Error(simplifyEngineError(error.message, {
-                    engine: 'ffmpeg',
-                    inputPath,
-                    format: normalizedFormat
-                }));
+            const ffmpegPath = await resolveExecutable('ffmpeg');
+            if (!ffmpegPath) {
+                return reject(new Error('ffmpeg not found at: ffmpeg'));
             }
-        }
 
-        reject(lastError || new Error('FFmpeg conversion failed.'));
+            const normalizedFormat = normalizeFormat(format);
+            const desiredOutput = path.format({
+                dir: path.dirname(outputPath),
+                name: path.parse(outputPath).name,
+                ext: `.${normalizedFormat}`
+            });
+            const finalOutput = await createUniqueOutputPath(desiredOutput);
+            throwIfCancelled(controller);
+
+            const imageFrameArgs = type === 'image' && normalizedFormat !== 'gif' ? ['-frames:v', '1'] : [];
+            const plans = await getFFmpegPlans(type, normalizedFormat, quality);
+            const reportProgress = createProgressReporter(onProgress);
+            let lastError = null;
+
+            for (const plan of plans) {
+                throwIfCancelled(controller);
+                await deleteFileIfExists(finalOutput);
+
+                try {
+                    await runFFmpegConversionAttempt({
+                        ffmpegPath,
+                        inputPath,
+                        outputPath: finalOutput,
+                        codecArgs: plan.codecArgs,
+                        qualityArgs: plan.qualityArgs,
+                        imageFrameArgs,
+                        onProgress: reportProgress,
+                        controller
+                    });
+
+                    reportProgress(100);
+                    return resolve({
+                        success: true,
+                        outputPath: finalOutput,
+                        format: normalizedFormat,
+                        hardwareAccelerated: Boolean(plan.isHardwareAccelerated),
+                        encoder: plan.encoder || null
+                    });
+                } catch (error) {
+                    if (isCancellationError(error)) {
+                        throw error;
+                    }
+
+                    lastError = new Error(simplifyEngineError(error.message, {
+                        engine: 'ffmpeg',
+                        inputPath,
+                        format: normalizedFormat
+                    }));
+                }
+            }
+
+            reject(lastError || new Error('FFmpeg conversion failed.'));
+        } catch (error) {
+            reject(error);
+        }
     });
 }
 
@@ -758,74 +945,93 @@ async function renameIfNeeded(sourcePath, targetPath) {
     return targetPath;
 }
 
-function convertWithLibreOffice({ inputPath, outputPath, format, onProgress }) {
+function convertWithLibreOffice({ inputPath, outputPath, format, onProgress, controller }) {
     return new Promise(async (resolve, reject) => {
-        const sofficePath = await resolveExecutable('libreoffice');
-        if (!sofficePath) {
-            return reject(new Error('LibreOffice not found at: soffice'));
+        try {
+            throwIfCancelled(controller);
+
+            const sofficePath = await resolveExecutable('libreoffice');
+            if (!sofficePath) {
+                return reject(new Error('LibreOffice not found at: soffice'));
+            }
+
+            const normalizedFormat = normalizeFormat(format);
+            const outputDir = path.dirname(outputPath);
+            const baseName = path.parse(inputPath).name;
+            const expectedOutput = path.join(outputDir, `${baseName}.${normalizedFormat}`);
+            const convertTarget = DOCUMENT_FILTERS[normalizedFormat] || normalizedFormat;
+            const args = [
+                '--headless',
+                '--norestore',
+                '--nolockcheck',
+                '--convert-to',
+                convertTarget,
+                '--outdir',
+                outputDir,
+                inputPath
+            ];
+
+            const reportProgress = createProgressReporter(onProgress);
+            reportProgress(10);
+
+            const proc = spawn(sofficePath, args, { windowsHide: true });
+            registerActiveProcess(controller, proc);
+            let stdoutOutput = '';
+            let stderrOutput = '';
+
+            proc.stdout.on('data', (chunk) => {
+                stdoutOutput += chunk.toString();
+                reportProgress(65);
+            });
+
+            proc.stderr.on('data', (chunk) => {
+                stderrOutput += chunk.toString();
+            });
+
+            proc.on('error', (error) => {
+                if (controller?.cancelled) {
+                    reject(createCancellationError(controller.cancelReason));
+                    return;
+                }
+                reject(new Error(`Failed to start LibreOffice: ${error.message}`));
+            });
+
+            proc.on('close', async (code) => {
+                if (controller?.cancelled) {
+                    await deleteFileIfExists(expectedOutput);
+                    reject(createCancellationError(controller.cancelReason));
+                    return;
+                }
+
+                if (code !== 0) {
+                    const errorMsg = stderrOutput.trim() || stdoutOutput.trim() || `LibreOffice exited with code ${code}`;
+                    return reject(new Error(errorMsg));
+                }
+
+                if (!await pathExists(expectedOutput)) {
+                    return reject(new Error('LibreOffice did not produce the expected output file.'));
+                }
+
+                const finalOutput = await renameIfNeeded(expectedOutput, await createUniqueOutputPath(outputPath));
+                reportProgress(100);
+                resolve({ success: true, outputPath: finalOutput, format: normalizedFormat });
+            });
+        } catch (error) {
+            reject(error);
         }
-
-        const normalizedFormat = normalizeFormat(format);
-        const outputDir = path.dirname(outputPath);
-        const baseName = path.parse(inputPath).name;
-        const expectedOutput = path.join(outputDir, `${baseName}.${normalizedFormat}`);
-        const convertTarget = DOCUMENT_FILTERS[normalizedFormat] || normalizedFormat;
-        const args = [
-            '--headless',
-            '--norestore',
-            '--nolockcheck',
-            '--convert-to',
-            convertTarget,
-            '--outdir',
-            outputDir,
-            inputPath
-        ];
-
-        const reportProgress = createProgressReporter(onProgress);
-        reportProgress(10);
-
-        const proc = spawn(sofficePath, args, { windowsHide: true });
-        let stdoutOutput = '';
-        let stderrOutput = '';
-
-        proc.stdout.on('data', (chunk) => {
-            stdoutOutput += chunk.toString();
-            reportProgress(65);
-        });
-
-        proc.stderr.on('data', (chunk) => {
-            stderrOutput += chunk.toString();
-        });
-
-        proc.on('error', (error) => {
-            reject(new Error(`Failed to start LibreOffice: ${error.message}`));
-        });
-
-        proc.on('close', async (code) => {
-            if (code !== 0) {
-                const errorMsg = stderrOutput.trim() || stdoutOutput.trim() || `LibreOffice exited with code ${code}`;
-                return reject(new Error(errorMsg));
-            }
-
-            if (!await pathExists(expectedOutput)) {
-                return reject(new Error('LibreOffice did not produce the expected output file.'));
-            }
-
-            const finalOutput = await renameIfNeeded(expectedOutput, await createUniqueOutputPath(outputPath));
-            reportProgress(100);
-            resolve({ success: true, outputPath: finalOutput, format: normalizedFormat });
-        });
     });
 }
 
-async function recompressArchive({ extractDir, outputPath, format, onProgress }) {
+async function recompressArchive({ extractDir, outputPath, format, onProgress, controller }) {
     const sevenZipPath = await resolveExecutable('7zip');
     if (!sevenZipPath) {
         throw new Error('7-Zip not found at: 7z');
     }
+    throwIfCancelled(controller);
     const args = ['a', `-t${format}`, outputPath, path.join(extractDir, '*'), '-y'];
 
     const result = await runProcess(sevenZipPath, args, {
+        controller,
         onStdout: (msg) => {
             const percentMatch = msg.match(/(\d+)%/);
             if (percentMatch && onProgress) {
@@ -839,30 +1045,34 @@ async function recompressArchive({ extractDir, outputPath, format, onProgress })
     }
 }
 
-function convertWithSevenZip({ inputPath, outputPath, format, onProgress }) {
+function convertWithSevenZip({ inputPath, outputPath, format, onProgress, controller }) {
     return new Promise(async (resolve, reject) => {
-        const sevenZipPath = await resolveExecutable('7zip');
-        if (!sevenZipPath) {
-            return reject(new Error('7-Zip not found at: 7z'));
-        }
-
         const normalizedFormat = normalizeFormat(format);
-        const inputExt = normalizeFormat(path.extname(inputPath));
-        const desiredOutput = path.format({
-            dir: path.dirname(outputPath),
-            name: path.parse(outputPath).name,
-            ext: `.${normalizedFormat}`
-        });
-        const finalOutput = await createUniqueOutputPath(desiredOutput);
-        const reportProgress = createProgressReporter(onProgress);
         let tempRoot = null;
 
         try {
+            throwIfCancelled(controller);
+
+            const sevenZipPath = await resolveExecutable('7zip');
+            if (!sevenZipPath) {
+                return reject(new Error('7-Zip not found at: 7z'));
+            }
+
+            const inputExt = normalizeFormat(path.extname(inputPath));
+            const desiredOutput = path.format({
+                dir: path.dirname(outputPath),
+                name: path.parse(outputPath).name,
+                ext: `.${normalizedFormat}`
+            });
+            const finalOutput = await createUniqueOutputPath(desiredOutput);
+            const reportProgress = createProgressReporter(onProgress);
+
             if (!ARCHIVE_FORMATS.has(inputExt)) {
                 const args = ['a', `-t${normalizedFormat}`, finalOutput, inputPath, '-y'];
                 reportProgress(10);
 
                 const result = await runProcess(sevenZipPath, args, {
+                    controller,
                     onStdout: (msg) => {
                         const percentMatch = msg.match(/(\d+)%/);
                         if (percentMatch) {
@@ -891,6 +1101,7 @@ function convertWithSevenZip({ inputPath, outputPath, format, onProgress }) {
 
             const extractArgs = ['x', inputPath, `-o${extractDir}`, '-y'];
             const extractResult = await runProcess(sevenZipPath, extractArgs, {
+                controller,
                 onStdout: (msg) => {
                     const percentMatch = msg.match(/(\d+)%/);
                     if (percentMatch) {
@@ -905,10 +1116,16 @@ function convertWithSevenZip({ inputPath, outputPath, format, onProgress }) {
             }
 
             reportProgress(55);
-            await recompressArchive({ extractDir, outputPath: finalOutput, format: normalizedFormat, onProgress: (value) => {
-                const scaled = 55 + Math.round(value * 0.45);
-                reportProgress(Math.min(scaled, 99));
-            } });
+            await recompressArchive({
+                extractDir,
+                outputPath: finalOutput,
+                format: normalizedFormat,
+                controller,
+                onProgress: (value) => {
+                    const scaled = 55 + Math.round(value * 0.45);
+                    reportProgress(Math.min(scaled, 99));
+                }
+            });
 
             if (!await pathExists(finalOutput)) {
                 throw new Error('Archive conversion finished, but no output file was created.');
@@ -917,6 +1134,11 @@ function convertWithSevenZip({ inputPath, outputPath, format, onProgress }) {
             reportProgress(100);
             resolve({ success: true, outputPath: finalOutput, format: normalizedFormat });
         } catch (error) {
+            if (isCancellationError(error)) {
+                reject(error);
+                return;
+            }
+
             reject(new Error(simplifyEngineError(error.message, {
                 engine: '7-Zip',
                 inputPath,
@@ -953,8 +1175,10 @@ async function prepareBatchJobs(jobs) {
     }));
 }
 
-async function convert({ inputPath, outputPath, format, type, quality }, onProgress) {
+async function convert({ inputPath, outputPath, format, type, quality }, onProgress, controller = null) {
+    throwIfCancelled(controller);
     const normalizedFormat = await validateRequest({ inputPath, outputPath, format, type });
+    throwIfCancelled(controller);
 
     let resolvedType = type;
     if (!resolvedType) {
@@ -978,26 +1202,33 @@ async function convert({ inputPath, outputPath, format, type, quality }, onProgr
                     format: normalizedFormat,
                     type: resolvedType,
                     quality,
-                    onProgress
+                    onProgress,
+                    controller
                 });
             case 'libreoffice':
                 return await convertWithLibreOffice({
                     inputPath,
                     outputPath,
                     format: normalizedFormat,
-                    onProgress
+                    onProgress,
+                    controller
                 });
             case '7zip':
                 return await convertWithSevenZip({
                     inputPath,
                     outputPath,
                     format: normalizedFormat,
-                    onProgress
+                    onProgress,
+                    controller
                 });
             default:
                 throw new Error(`Unknown engine for type: ${resolvedType}`);
         }
     } catch (error) {
+        if (isCancellationError(error)) {
+            throw error;
+        }
+
         throw new Error(simplifyEngineError(error.message, {
             engine,
             inputPath,
@@ -1006,32 +1237,86 @@ async function convert({ inputPath, outputPath, format, type, quality }, onProgr
     }
 }
 
-async function convertBatch({ jobs }, onProgress) {
+async function convertBatch({ jobs }, onProgress, controller = null) {
     if (!Array.isArray(jobs) || jobs.length === 0) {
         throw new Error('Batch conversion requires at least one job.');
     }
 
+    throwIfCancelled(controller);
     const preparedJobs = await prepareBatchJobs(jobs);
     const results = new Array(preparedJobs.length);
     const engineActiveCounts = new Map();
     const pendingIndexes = preparedJobs.map((_, index) => index);
     const maxWorkers = getBatchWorkerLimit(preparedJobs.length);
+    let finished = false;
+    let resolveIfFinished = () => false;
+    const unsubscribeCancellation = onCancellation(controller, () => resolveIfFinished());
+
+    const markCancelledResult = (index) => {
+        if (results[index]) {
+            return false;
+        }
+
+        const job = preparedJobs[index] || {};
+        results[index] = {
+            success: false,
+            cancelled: true,
+            fileId: job.fileId || null,
+            inputPath: job.inputPath,
+            outputPath: job.outputPath,
+            format: normalizeFormat(job.format),
+            error: controller?.cancelReason || 'Conversion stopped.'
+        };
+        return true;
+    };
 
     await new Promise((resolve) => {
         let activeJobs = 0;
         let completedJobs = 0;
 
-        const finishJob = () => {
-            completedJobs += 1;
-            if (completedJobs >= preparedJobs.length) {
-                resolve();
-                return;
+        resolveIfFinished = () => {
+            if (finished) {
+                return true;
             }
 
+            if (controller?.cancelled) {
+                while (pendingIndexes.length > 0) {
+                    if (markCancelledResult(pendingIndexes.shift())) {
+                        completedJobs += 1;
+                    }
+                }
+
+                if (activeJobs === 0) {
+                    finished = true;
+                    resolve();
+                    return true;
+                }
+
+                return false;
+            }
+
+            if (completedJobs >= preparedJobs.length) {
+                finished = true;
+                resolve();
+                return true;
+            }
+
+            return false;
+        };
+
+        const finishJob = () => {
+            completedJobs += 1;
+            if (resolveIfFinished()) {
+                return;
+            }
             tryStartJobs();
         };
 
         const tryStartJobs = () => {
+            if (resolveIfFinished()) {
+                return;
+            }
+
             while (activeJobs < maxWorkers) {
                 const nextPendingPosition = pendingIndexes.findIndex((index) => {
                     const engine = getJobEngine(preparedJobs[index] || {});
@@ -1059,7 +1344,7 @@ async function convertBatch({ jobs }, onProgress) {
                             percent
                         });
                     }
-                }).then((result) => {
+                }, controller).then((result) => {
                     results[index] = {
                         success: true,
                         fileId: job.fileId || null,
@@ -1070,6 +1355,11 @@ async function convertBatch({ jobs }, onProgress) {
                         encoder: result.encoder || null
                     };
                 }).catch((error) => {
+                    if (isCancellationError(error) || controller?.cancelled) {
+                        markCancelledResult(index);
+                        return;
+                    }
+
                     results[index] = {
                         success: false,
                         fileId: job.fileId || null,
@@ -1091,25 +1381,34 @@ async function convertBatch({ jobs }, onProgress) {
                 });
             }
         };
-
         tryStartJobs();
+    }).finally(() => {
+        unsubscribeCancellation();
     });
 
-    const successCount = results.filter((result) => result.success).length;
-    const errorCount = results.length - successCount;
+    const successCount = results.filter((result) => result?.success).length;
+    const cancelledCount = results.filter((result) => result?.cancelled).length;
+    const errorCount = results.filter((result) => result && !result.success && !result.cancelled).length;
 
     return {
-        success: errorCount === 0,
+        success: errorCount === 0 && cancelledCount === 0,
+        cancelled: cancelledCount > 0,
         results,
         totalJobs: preparedJobs.length,
         successCount,
-        errorCount
+        errorCount,
+        cancelledCount
     };
 }
 
 module.exports = {
     convert,
     convertBatch,
+    cancelActiveConversions,
+    createCancellationController,
+    activateCancellationController,
+    releaseCancellationController,
+    isCancellationError,
     getEngineStatus,
     FORMAT_TYPES,
     FFMPEG_PATH: ENGINE_DEFINITIONS.ffmpeg.candidates[0],

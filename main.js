@@ -260,31 +260,50 @@ ipcMain.handle('set-titlebar-theme', (event, theme) => {
 
 // ─── File Conversion with Progress ─────────────────────────────
 ipcMain.handle('convert-file', async (_event, data) => {
+    const manager = getConversionManager();
+    const controller = manager.activateCancellationController(
+        manager.createCancellationController(data?.fileId || 'single-conversion')
+    );
+
     try {
-        const manager = getConversionManager();
         const result = await manager.convert(data, (percent) => {
             relayConversionProgress({
                 fileId: data.fileId,
                 percent
             });
-        });
+        }, controller);
         return { success: true, ...result };
     } catch (error) {
+        if (manager.isCancellationError?.(error)) {
+            return {
+                success: false,
+                cancelled: true,
+                error: error.message || 'Conversion stopped.'
+            };
+        }
+
         return {
             success: false,
             error: error.message || 'Conversion failed.'
         };
+    } finally {
+        manager.releaseCancellationController?.(controller);
     }
 });
 
 ipcMain.handle('cancel-conversion', async () => {
-    return { success: false, error: 'Cancellation is not implemented in this build.' };
+    const manager = getConversionManager();
+    return manager.cancelActiveConversions?.('Conversion stopped.') || { success: false, cancelledCount: 0 };
 });
 
 // ─── Get supported format lists ─────────────────────────────────
 ipcMain.handle('convert-batch', async (_event, data) => {
+    const manager = getConversionManager();
+    const controller = manager.activateCancellationController(
+        manager.createCancellationController('batch-conversion')
+    );
+
     try {
-        const manager = getConversionManager();
         return await manager.convertBatch(data, ({ fileId, percent, batchIndex, totalJobs }) => {
             relayConversionProgress({
                 fileId,
@@ -292,8 +311,21 @@ ipcMain.handle('convert-batch', async (_event, data) => {
                 batchIndex,
                 totalJobs
             });
-        });
+        }, controller);
     } catch (error) {
+        if (manager.isCancellationError?.(error)) {
+            return {
+                success: false,
+                cancelled: true,
+                results: [],
+                totalJobs: Array.isArray(data?.jobs) ? data.jobs.length : 0,
+                successCount: 0,
+                errorCount: 0,
+                cancelledCount: Array.isArray(data?.jobs) ? data.jobs.length : 0,
+                error: error.message || 'Conversion stopped.'
+            };
+        }
+
         return {
             success: false,
             results: [],
@@ -302,6 +334,8 @@ ipcMain.handle('convert-batch', async (_event, data) => {
             errorCount: Array.isArray(data?.jobs) ? data.jobs.length : 0,
             error: error.message || 'Batch conversion failed.'
         };
+    } finally {
+        manager.releaseCancellationController?.(controller);
     }
 });
 

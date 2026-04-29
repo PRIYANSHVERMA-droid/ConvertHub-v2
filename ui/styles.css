@@ -99,6 +99,26 @@ body {
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
+/* Light theme - batch status */
+[data-theme="light"] .batch-status {
+    border-color: rgba(148, 163, 184, 0.28);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.78) 0%, rgba(241, 245, 249, 0.92) 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] .batch-status-title {
+    color: #1e293b;
+}
+
+[data-theme="light"] .batch-status-meta {
+    color: #64748b;
+}
+
+[data-theme="light"] .batch-progress-bar {
+    background: rgba(148, 163, 184, 0.22);
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
 /* Light theme - sidebar */
 [data-theme="light"] .sidebar {
     background: var(--sidebar-bg);
@@ -1410,7 +1430,6 @@ section h4 {
 /* ─── Convert Button Processing State ────────────────────────── */
 .glow-btn.processing {
     background: linear-gradient(135deg, #6d28d9, #1d4ed8);
-    pointer-events: none;
     opacity: 0.8;
 }
 

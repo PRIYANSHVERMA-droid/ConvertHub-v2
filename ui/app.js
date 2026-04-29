@@ -191,6 +191,7 @@
     let activeBatch = null;
     let isSyncingScopeControls = false;
     let engineStatus = null;
+    let isCancellingConversion = false;
 
     function getSavedSettings() {
         try {
@@ -446,7 +447,7 @@
         activeBatch = state;
         if (!state) {
             batchStatus.classList.add('hidden');
-            batchStatusTitle.textContent = 'Batch progress';
+            batchStatusTitle.textContent = 'Conversion progress';
             batchStatusMeta.textContent = '0 completed • 0 remaining';
             batchProgressFill.style.width = '0%';
             return;
@@ -461,7 +462,8 @@
         return {
             totalJobs,
             completed: 0,
-            completedIds: new Set()
+            completedIds: new Set(),
+            cancelled: false
         };
     }
 
@@ -876,6 +878,14 @@
                 background: '#f43f5e'
             };
         }
+        if (item.status === 'cancelled') {
+            return {
+                text: item.errorMessage || 'Stopped',
+                color: '#f59e0b',
+                width: `${Math.max(0, Math.min(100, item.progress || 0))}%`,
+                background: '#f59e0b'
+            };
+        }
         return {
             text: 'Ready',
             color: 'var(--text-muted)',
@@ -885,7 +895,12 @@
     }
 
     function canRetryItem(item) {
-        return Boolean(item?.detectedType && item?.status === 'error' && item?.file?.path && !isConverting);
+        return Boolean(
+            item?.detectedType
+            && ['error', 'cancelled'].includes(item?.status)
+            && item?.file?.path
+            && !isConverting
+        );
     }
 
     function createQueueItemElement(item) {
@@ -1016,13 +1031,23 @@
     }
 
     function updateConvertButtonLabel() {
+        const readyCount = fileQueue.filter((item) => item.status === 'ready' && item.detectedType).length;
         if (isConverting) {
+            convertBtn.innerHTML = isCancellingConversion
+                ? '<i class="fa-solid fa-circle-notch fa-spin"></i> Stopping...'
+                : '<i class="fa-solid fa-stop"></i> Stop Conversion';
+            convertBtn.disabled = isCancellingConversion;
+            convertBtn.classList.add('processing');
             return;
         }
-        const readyCount = fileQueue.filter((item) => item.status === 'ready' && item.detectedType).length;
+
+        convertBtn.disabled = false;
+        convertBtn.classList.remove('processing');
         convertBtn.innerHTML = readyCount > 1
             ? `<i class="fa-solid fa-layer-group"></i> Convert ${readyCount} Files`
-            : '<i class="fa-solid fa-play"></i> Start Conversion';
+            : readyCount === 1
+                ? '<i class="fa-solid fa-play"></i> Convert File'
+                : '<i class="fa-solid fa-play"></i> Start Conversion';
     }
 
     function renderQueue() {
@@ -1078,6 +1103,31 @@
         }
         renderQueue();
         syncSidebarFromScope();
+    }
+
+    function removeCompletedItemsFromQueue(fileIds) {
+        const idsToRemove = new Set((fileIds || []).filter(Boolean));
+        if (idsToRemove.size === 0) {
+            return;
+        }
+
+        fileQueue = fileQueue.filter((item) => !idsToRemove.has(item.id));
+
+        if (selectedScope.kind === 'file' && idsToRemove.has(selectedScope.fileId)) {
+            selectedScope = {
+                kind: 'group',
+                type: getQueueGroups()[0]?.type && getQueueGroups()[0].type !== 'unsupported'
+                    ? getQueueGroups()[0].type
+                    : 'audio'
+            };
+        }
+
+        if (fileQueue.every((item) => item.detectedType !== getSelectedType())) {
+            selectedScope = {
+                kind: 'group',
+                type: fileQueue.find((item) => item.detectedType)?.detectedType || 'audio'
+            };
+        }
     }
 
     function addFilesToQueue(files) {
@@ -1170,6 +1220,12 @@
                 if (appSettings.openFolderOnComplete && result.outputPath && window.app?.openFolder) {
                     await window.app.openFolder(getFolderFromPath(result.outputPath));
                 }
+
+                removeCompletedItemsFromQueue([item.id]);
+            } else if (result?.cancelled) {
+                item.status = 'cancelled';
+                item.errorMessage = result?.error || 'Conversion stopped.';
+                showToast(item.errorMessage, 'warning');
             } else {
                 item.status = 'error';
                 item.progress = 100;
@@ -1183,6 +1239,29 @@
             showToast(item.errorMessage || `Failed to convert ${item.file.name}`, 'error', 6000);
         } finally {
             renderQueue();
+        }
+    }
+
+    async function stopActiveConversion() {
+        if (!isConverting || isCancellingConversion || !window.app?.cancelConversion) {
+            return;
+        }
+
+        isCancellingConversion = true;
+        updateConvertButtonLabel();
+        showToast('Stopping conversion...', 'info', 2500, { skipNotification: true });
+
+        try {
+            const result = await window.app.cancelConversion();
+            if (!result?.success) {
+                isCancellingConversion = false;
+                updateConvertButtonLabel();
+                showToast(result?.error || 'Nothing is currently running to stop.', 'warning');
+            }
+        } catch (error) {
+            isCancellingConversion = false;
+            updateConvertButtonLabel();
+            showToast(error?.message || 'Unable to stop the current conversion.', 'error', 6000);
         }
     }
 
@@ -1200,12 +1279,15 @@
         }
 
         isConverting = true;
-        convertBtn.classList.add('processing');
-        convertBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Running Batch...';
+        isCancellingConversion = false;
+        updateConvertButtonLabel();
 
         let successCount = 0;
         let errorCount = 0;
+        let cancelledCount = 0;
         let renamedOutputCount = 0;
+        const completedQueueIds = [];
+        const isSingleConversion = readyFiles.length === 1;
 
         readyFiles.forEach((item) => {
             item.status = 'converting';
@@ -1214,7 +1296,7 @@
 
         renderQueue();
         setBatchStatus({
-            title: `Preparing batch of ${readyFiles.length}`,
+            title: isSingleConversion ? 'Preparing conversion' : `Preparing batch of ${readyFiles.length}`,
             meta: `0 completed • ${readyFiles.length} remaining`,
             percent: 0,
             completed: 0,
@@ -1250,6 +1332,10 @@
             try {
                 const result = await window.app.convertBatch({ jobs });
                 const results = Array.isArray(result?.results) ? result.results : [];
+                const batchWasCancelled = Boolean(result?.cancelled);
+                if (batchWasCancelled && activeBatch) {
+                    activeBatch.cancelled = true;
+                }
 
                 results.forEach((entry, index) => {
                     const item = getFileById(entry.fileId);
@@ -1269,6 +1355,11 @@
                             addRecentFile(item.file.name, entry.format || resolveFileSettings(item).format, entry.outputPath);
                             item.recordedInRecent = true;
                         }
+                        completedQueueIds.push(item.id);
+                    } else if (entry.cancelled) {
+                        item.status = 'cancelled';
+                        item.errorMessage = entry.error || 'Conversion stopped.';
+                        cancelledCount += 1;
                     } else {
                         item.status = 'error';
                         item.progress = 100;
@@ -1281,8 +1372,8 @@
 
                     const completed = successCount + errorCount;
                     setBatchStatus({
-                        title: `Processed ${index + 1} of ${results.length}`,
-                        meta: `${completed} completed • ${Math.max(0, readyFiles.length - completed)} remaining`,
+                        title: isSingleConversion ? 'Processing conversion' : `Processed ${index + 1} of ${results.length}`,
+                        meta: `${completed} completed • ${Math.max(0, readyFiles.length - completed - cancelledCount)} remaining`,
                         percent: results.length ? Math.round(((index + 1) / results.length) * 100) : 100,
                         completed,
                         completedIds: activeBatch?.completedIds || new Set()
@@ -1290,7 +1381,7 @@
                 });
 
                 if (!result?.success && result?.error && results.length === 0) {
-                    showToast(result.error, 'error', 6000);
+                    showToast(result.error, batchWasCancelled ? 'warning' : 'error', 6000);
                 }
 
                 if (appSettings.openFolderOnComplete && successCount > 0 && window.app && window.app.openFolder) {
@@ -1314,17 +1405,33 @@
         }
 
         isConverting = false;
-        convertBtn.classList.remove('processing');
+        isCancellingConversion = false;
+        updateConvertButtonLabel();
         setBatchStatus({
-            title: errorCount === 0 ? 'Batch complete' : 'Batch finished with issues',
-            meta: `${successCount} completed • ${errorCount} failed`,
+            title: cancelledCount > 0
+                ? (isSingleConversion ? 'Conversion stopped' : 'Batch stopped')
+                : errorCount === 0
+                    ? (isSingleConversion ? 'Conversion complete' : 'Batch complete')
+                    : (isSingleConversion ? 'Conversion finished with issues' : 'Batch finished with issues'),
+            meta: cancelledCount > 0
+                ? `${successCount} completed • ${cancelledCount} stopped`
+                : `${successCount} completed • ${errorCount} failed`,
             percent: 100,
-            completed: successCount + errorCount,
+            completed: successCount + errorCount + cancelledCount,
             completedIds: activeBatch?.completedIds || new Set()
         });
+
+        removeCompletedItemsFromQueue(completedQueueIds);
         renderQueue();
 
-        if (successCount > 0 && errorCount === 0) {
+        if (cancelledCount > 0) {
+            showToast(
+                isSingleConversion
+                    ? 'Conversion stopped.'
+                    : `${cancelledCount} conversion${cancelledCount > 1 ? 's were' : ' was'} stopped.`,
+                'warning'
+            );
+        } else if (successCount > 0 && errorCount === 0) {
             showToast(`${successCount} file${successCount > 1 ? 's' : ''} converted successfully!`, 'success');
         } else if (successCount > 0 && errorCount > 0) {
             showToast(`${successCount} succeeded, ${errorCount} failed`, 'warning');
@@ -1398,7 +1505,9 @@
                     const completed = activeBatch.completed || 0;
                     const remaining = Math.max(0, data.totalJobs - completed);
                     setBatchStatus({
-                        title: `Batch converting ${data.batchIndex + 1} of ${data.totalJobs}`,
+                        title: data.totalJobs === 1
+                            ? 'Converting file'
+                            : `Batch converting ${data.batchIndex + 1} of ${data.totalJobs}`,
                         meta: `${completed} completed • ${remaining} remaining`,
                         percent: Math.round(((data.batchIndex + (data.percent / 100)) / data.totalJobs) * 100),
                         completed,
@@ -1604,7 +1713,13 @@
         showToast('Settings reset to defaults', 'info');
     });
 
-    convertBtn.addEventListener('click', runBatchConversion);
+    convertBtn.addEventListener('click', () => {
+        if (isConverting) {
+            stopActiveConversion();
+            return;
+        }
+        runBatchConversion();
+    });
 
     clearRecentBtn.addEventListener('click', () => {
         localStorage.removeItem('converthub_recent');
