@@ -644,6 +644,11 @@ section h4 {
     transition: background 0.2s;
 }
 .queue-item:hover { background: rgba(0,0,0,0.3); }
+.queue-item-dragging { opacity: 0.4; }
+.queue-item-drag-over {
+    border-color: rgba(139, 92, 246, 0.6);
+    background: rgba(139, 92, 246, 0.06);
+}
 .queue-item-selected {
     border-color: rgba(139, 92, 246, 0.45);
     box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.25);
@@ -717,6 +722,10 @@ section h4 {
     color: var(--accent-image) !important;
     background: rgba(16, 185, 129, 0.12) !important;
 }
+.queue-cancel-btn:hover {
+    color: #f59e0b !important;
+    background: rgba(245, 158, 11, 0.1) !important;
+}
 .queue-retry-btn:disabled {
     opacity: 0.3;
     cursor: not-allowed;
@@ -780,6 +789,28 @@ section h4 {
 .recent-meta { font-size: 11px; color: var(--text-muted); }
 
 .success-icon { color: var(--accent-image); font-size: 14px; filter: drop-shadow(0 0 5px var(--accent-image));}
+
+.recent-actions {
+    display: none;
+    gap: 4px;
+}
+.recent-item:hover .recent-actions {
+    display: flex;
+}
+.recent-action-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    font-size: 12px;
+    border-radius: 4px;
+    transition: 0.2s;
+}
+.recent-action-btn:hover {
+    color: var(--text-main);
+    background: rgba(255, 255, 255, 0.1);
+}
 
 .outline-btn {
     width: 100%;
@@ -1409,6 +1440,22 @@ section h4 {
     font-size: 13px;
     color: var(--text-muted);
     font-weight: 400;
+}
+
+.queue-encoder-badge {
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+}
+.queue-encoder-badge[data-hw="true"] {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--accent-image);
+}
+.queue-encoder-badge[data-hw="false"] {
+    background: rgba(148, 163, 184, 0.12);
+    color: var(--text-muted);
 }
 
 /* ─── Quality Value Display ──────────────────────────────────── */

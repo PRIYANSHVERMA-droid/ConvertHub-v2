@@ -113,6 +113,7 @@ const ENGINE_CONCURRENCY_LIMITS = {
 };
 const CONVERSION_CANCELLED_CODE = 'CONVERSION_CANCELLED';
 const activeCancellationControllers = new Set();
+const activeControllersByFileId = new Map();
 let cancellationControllerCounter = 0;
 
 function createCancellationError(message = 'Conversion stopped.') {
@@ -176,6 +177,9 @@ function createCancellationController(label = 'conversion') {
 function activateCancellationController(controller) {
     if (controller) {
         activeCancellationControllers.add(controller);
+        if (controller.label && controller.label.startsWith('file-')) {
+            activeControllersByFileId.set(controller.label, controller);
+        }
     }
     return controller;
 }
@@ -183,6 +187,9 @@ function activateCancellationController(controller) {
 function releaseCancellationController(controller) {
     if (controller) {
         activeCancellationControllers.delete(controller);
+        if (controller.label && controller.label.startsWith('file-')) {
+            activeControllersByFileId.delete(controller.label);
+        }
     }
 }
 
@@ -238,6 +245,14 @@ function cancelActiveConversions(reason = 'Conversion stopped.') {
         success: cancelledCount > 0,
         cancelledCount
     };
+}
+
+function cancelConversionById(fileId, reason = 'Conversion stopped.') {
+    const controller = activeControllersByFileId.get(fileId);
+    if (controller) {
+        return cancelController(controller, reason);
+    }
+    return false;
 }
 
 function registerActiveProcess(controller, proc) {
@@ -517,6 +532,7 @@ function simplifyEngineError(errorMessage, { engine, inputPath, format } = {}) {
 }
 
 function parseDuration(str) {
+    if (!str.includes('Duration:')) return 0;
     const match = str.match(/Duration:\s*(\d{2}):(\d{2}):(\d{2})\.(\d{2})/);
     if (!match) return 0;
     return parseInt(match[1], 10) * 3600
@@ -526,6 +542,7 @@ function parseDuration(str) {
 }
 
 function parseTime(str) {
+    if (!str.includes('time=')) return 0;
     const match = str.match(/time=(\d{2}):(\d{2}):(\d{2})\.(\d{2})/);
     if (!match) return 0;
     return parseInt(match[1], 10) * 3600
@@ -1405,6 +1422,7 @@ module.exports = {
     convert,
     convertBatch,
     cancelActiveConversions,
+    cancelConversionById,
     createCancellationController,
     activateCancellationController,
     releaseCancellationController,

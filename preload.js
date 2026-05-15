@@ -58,6 +58,7 @@ contextBridge.exposeInMainWorld('app', {
     convertFile: (data) => ipcRenderer.invoke('convert-file', data),
     convertBatch: (data) => ipcRenderer.invoke('convert-batch', data),
     cancelConversion: (data) => ipcRenderer.invoke('cancel-conversion', data),
+    cancelFile: (data) => ipcRenderer.invoke('cancel-file', data),
     getFormats: () => ipcRenderer.invoke('get-formats'),
     getEngineStatus: () => ipcRenderer.invoke('get-engine-status'),
 
@@ -88,6 +89,7 @@ contextBridge.exposeInMainWorld('app', {
     // Shell
     openFolder: (folderPath) => ipcRenderer.invoke('open-folder', folderPath),
     openPath: (targetPath) => ipcRenderer.invoke('open:path', targetPath),
+    pathExists: (data) => ipcRenderer.invoke('path-exists', data),
 
     // Window controls
     minimize: async () => {

@@ -229,6 +229,49 @@
         localStorage.setItem('converthub_recent', JSON.stringify(files.slice(0, 20)));
     }
 
+    function serializeQueue() {
+        const serialized = fileQueue.map(item => ({
+            id: item.id,
+            filePath: item.file.path,
+            fileName: item.file.name,
+            fileSize: item.file.size,
+            detectedType: item.detectedType,
+            status: item.status,
+            progress: item.progress,
+            override: item.override,
+            recordedInRecent: item.recordedInRecent,
+            hardwareAccelerated: item.hardwareAccelerated,
+            encoder: item.encoder
+        }));
+        localStorage.setItem('converthub_queue', JSON.stringify(serialized));
+    }
+
+    async function restoreQueue() {
+        const saved = localStorage.getItem('converthub_queue');
+        if (!saved) return;
+        try {
+            const items = JSON.parse(saved);
+            const restored = [];
+            for (const item of items) {
+                const exists = await window.app.pathExists({ path: item.filePath });
+                if (!exists) continue;
+                restored.push({
+                    ...item,
+                    file: {
+                        name: item.fileName,
+                        path: item.filePath,
+                        size: item.fileSize
+                    },
+                    status: item.status === 'converting' ? 'ready' : item.status
+                });
+            }
+            fileQueue = restored;
+            renderQueue();
+        } catch (e) {
+            console.error('Failed to restore queue:', e);
+        }
+    }
+
     function typeUsesQuality(type) {
         return type === 'audio' || type === 'video' || type === 'image';
     }
@@ -642,11 +685,19 @@
                     <span class="recent-name" title="${item.name}">${truncateName(item.name, 22)}</span>
                     <span class="recent-meta">→ ${item.format} • ${item.time}</span>
                 </div>
+                <div class="recent-actions">
+                    <button class="recent-action-btn" title="Open file"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
+                    <button class="recent-action-btn" title="Show in folder"><i class="fa-regular fa-folder-open"></i></button>
+                </div>
                 <i class="fa-regular fa-circle-check success-icon pulse-anim"></i>
             `;
-            if (item.outputPath && window.app && window.app.openFolder) {
-                div.style.cursor = 'pointer';
-                div.addEventListener('click', () => {
+            if (item.outputPath && window.app) {
+                div.querySelector('.recent-action-btn:first-child').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    window.app.openPath(item.outputPath);
+                });
+                div.querySelector('.recent-action-btn:last-child').addEventListener('click', (e) => {
+                    e.stopPropagation();
                     window.app.openFolder(getFolderFromPath(item.outputPath));
                 });
             }
@@ -914,6 +965,7 @@
                 <i class="fa-solid fa-arrow-right queue-arrow"></i>
                 <span class="queue-format"></span>
                 <span class="queue-size"></span>
+                <span class="queue-encoder-badge hidden"></span>
                 <span class="queue-override-badge hidden">Custom</span>
             </div>
             <div class="progress-container">
@@ -923,6 +975,9 @@
                 </div>
             </div>
             <div class="queue-actions">
+                <button class="no-drag queue-cancel-btn hidden" data-id="${item.id}" title="Cancel conversion">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
                 <button class="no-drag queue-retry-btn hidden" data-id="${item.id}" title="Retry conversion">
                     <i class="fa-solid fa-rotate-right"></i>
                 </button>
@@ -932,11 +987,16 @@
             </div>
         `;
 
+        div.querySelector('.queue-cancel-btn').addEventListener('click', (event) => {
+            event.stopPropagation();
+            window.app.cancelFile({ fileId: item.id });
+        });
+
         div.querySelector('.queue-retry-btn').addEventListener('click', (event) => {
             event.stopPropagation();
             retryQueueItem(item.id);
         });
-
+        
         div.querySelector('.queue-delete-btn').addEventListener('click', (event) => {
             event.stopPropagation();
             removeFromQueue(item.id);
@@ -945,6 +1005,51 @@
         if (item.detectedType) {
             div.addEventListener('click', () => selectFile(item.id));
         }
+
+        div.draggable = item.status === 'ready';
+        div.addEventListener('dragstart', (event) => {
+            if (isConverting || item.status !== 'ready') {
+                event.preventDefault();
+                return;
+            }
+            dragSrcId = item.id;
+            div.classList.add('queue-item-dragging');
+        });
+
+        div.addEventListener('dragover', (event) => {
+            event.preventDefault();
+            if (item.id === dragSrcId) return;
+            dragOverId = item.id;
+            div.classList.add('queue-item-drag-over');
+            document.querySelectorAll('.queue-item').forEach(el => {
+                if (el !== div) el.classList.remove('queue-item-drag-over');
+            });
+        });
+
+        div.addEventListener('dragleave', () => {
+            div.classList.remove('queue-item-drag-over');
+        });
+
+        div.addEventListener('drop', (event) => {
+            event.preventDefault();
+            if (dragSrcId && dragSrcId !== dragOverId) {
+                const srcIdx = fileQueue.findIndex(i => i.id === dragSrcId);
+                const targetIdx = fileQueue.findIndex(i => i.id === dragOverId);
+                const [removed] = fileQueue.splice(srcIdx, 1);
+                fileQueue.splice(targetIdx, 0, removed);
+                serializeQueue();
+                renderQueue();
+            }
+        });
+
+        div.addEventListener('dragend', () => {
+            div.classList.remove('queue-item-dragging');
+            document.querySelectorAll('.queue-item').forEach(el => {
+                el.classList.remove('queue-item-dragging', 'queue-item-drag-over');
+            });
+            dragSrcId = null;
+            dragOverId = null;
+        });
 
         patchQueueItemElement(div, item);
         return div;
@@ -961,8 +1066,10 @@
         const name = el.querySelector('.queue-name');
         const formatEl = el.querySelector('.queue-format');
         const sizeEl = el.querySelector('.queue-size');
+        const encoderBadge = el.querySelector('.queue-encoder-badge');
         const progressText = el.querySelector('.progress-text');
         const progressBar = el.querySelector('.progress-bar-fill');
+        const cancelBtn = el.querySelector('.queue-cancel-btn');
         const retryBtn = el.querySelector('.queue-retry-btn');
         const deleteBtn = el.querySelector('.queue-delete-btn');
         const overrideBadge = el.querySelector('.queue-override-badge');
@@ -979,12 +1086,29 @@
         progressText.style.color = status.color;
         progressBar.style.width = status.width;
         progressBar.style.background = status.background;
+        cancelBtn.classList.toggle('hidden', item.status !== 'converting');
         retryBtn.classList.toggle('hidden', !retryVisible);
         retryBtn.disabled = !retryVisible;
         deleteBtn.disabled = item.status === 'converting';
         overrideBadge.classList.toggle('hidden', !item.override);
         el.classList.toggle('queue-item-selected', selectedScope.kind === 'file' && selectedScope.fileId === item.id);
         el.classList.toggle('queue-item-disabled', !item.detectedType);
+
+        if (item.status === 'done') {
+            if (item.hardwareAccelerated && item.encoder) {
+                encoderBadge.textContent = `⚡ ${item.encoder.toUpperCase()}`;
+                encoderBadge.dataset.hw = 'true';
+                encoderBadge.classList.remove('hidden');
+            } else {
+                encoderBadge.textContent = 'CPU';
+                encoderBadge.dataset.hw = 'false';
+                encoderBadge.classList.remove('hidden');
+            }
+        } else {
+            encoderBadge.classList.add('hidden');
+        }
+
+        el.draggable = item.status === 'ready' && !isConverting;
     }
 
     function createGroupSection(group, isMixedBatch) {
@@ -1101,6 +1225,7 @@
         if (fileQueue.every((item) => item.detectedType !== getSelectedType())) {
             selectedScope = { kind: 'group', type: fileQueue.find((item) => item.detectedType)?.detectedType || 'audio' };
         }
+        serializeQueue();
         renderQueue();
         syncSidebarFromScope();
     }
@@ -1110,7 +1235,6 @@
         if (idsToRemove.size === 0) {
             return;
         }
-
         fileQueue = fileQueue.filter((item) => !idsToRemove.has(item.id));
 
         if (selectedScope.kind === 'file' && idsToRemove.has(selectedScope.fileId)) {
@@ -1128,6 +1252,7 @@
                 type: fileQueue.find((item) => item.detectedType)?.detectedType || 'audio'
             };
         }
+        serializeQueue();
     }
 
     function addFilesToQueue(files) {
@@ -1171,6 +1296,7 @@
         if (unsupportedAdded > 0) {
             showToast(`${unsupportedAdded} file${unsupportedAdded > 1 ? 's are' : ' is'} not supported yet`, 'warning');
         }
+        serializeQueue();
     }
 
     async function retryQueueItem(fileId) {
@@ -1201,27 +1327,28 @@
                 fileId: item.id
             });
 
-            if (result?.success) {
-                item.status = 'done';
-                item.progress = 100;
-                item.errorMessage = '';
+                if (result?.success) {
+                    item.status = 'done';
+                    item.progress = 100;
+                    item.errorMessage = '';
+                    item.hardwareAccelerated = Boolean(result.hardwareAccelerated);
+                    item.encoder = result.encoder || null;
 
-                if (!item.recordedInRecent) {
-                    addRecentFile(item.file.name, result.format || resolved.format, result.outputPath);
-                    item.recordedInRecent = true;
-                }
+                    if (!item.recordedInRecent) {
+                        addRecentFile(item.file.name, result.format || resolved.format, result.outputPath);
+                        item.recordedInRecent = true;
+                    }
+                    serializeQueue();
+                    showToast(`${item.file.name} converted successfully`, 'success');
+                    if (result.outputPath && result.outputPath !== requestedOutputPath) {
+                        showToast('Output file was auto-renamed to avoid overwriting an existing file', 'info');
+                    }
 
-                showToast(`${item.file.name} converted successfully`, 'success');
+                    if (appSettings.openFolderOnComplete && result.outputPath && window.app?.openFolder) {
+                        await window.app.openFolder(getFolderFromPath(result.outputPath));
+                    }
 
-                if (result.outputPath && result.outputPath !== requestedOutputPath) {
-                    showToast('Output file was auto-renamed to avoid overwriting an existing file', 'info');
-                }
-
-                if (appSettings.openFolderOnComplete && result.outputPath && window.app?.openFolder) {
-                    await window.app.openFolder(getFolderFromPath(result.outputPath));
-                }
-
-                removeCompletedItemsFromQueue([item.id]);
+                    removeCompletedItemsFromQueue([item.id]);
             } else if (result?.cancelled) {
                 item.status = 'cancelled';
                 item.errorMessage = result?.error || 'Conversion stopped.';
@@ -1238,6 +1365,7 @@
             item.errorMessage = error?.message || 'Failed';
             showToast(item.errorMessage || `Failed to convert ${item.file.name}`, 'error', 6000);
         } finally {
+            serializeQueue();
             renderQueue();
         }
     }
@@ -1346,6 +1474,8 @@
                         item.status = 'done';
                         item.progress = 100;
                         item.errorMessage = '';
+                        item.hardwareAccelerated = Boolean(entry.hardwareAccelerated);
+                        item.encoder = entry.encoder || null;
                         successCount += 1;
                         if (entry.outputPath && jobs[index] && entry.outputPath !== jobs[index].outputPath) {
                             renamedOutputCount += 1;
@@ -1420,9 +1550,10 @@
             completed: successCount + errorCount + cancelledCount,
             completedIds: activeBatch?.completedIds || new Set()
         });
-
+        serializeQueue();
         removeCompletedItemsFromQueue(completedQueueIds);
         renderQueue();
+
 
         if (cancelledCount > 0) {
             showToast(
@@ -1466,6 +1597,8 @@
                 defaultDownloadsPath = '';
             }
         }
+
+        await restoreQueue();
 
         if (window.app && window.app.getEngineStatus) {
             try {
@@ -1647,6 +1780,7 @@
         selectedScope = { kind: 'group', type: 'audio' };
         ensureGroupSettings('audio');
         setBatchStatus(null);
+        localStorage.removeItem('converthub_queue');
         renderQueue();
         syncSidebarFromScope();
         showToast('Queue cleared', 'info');

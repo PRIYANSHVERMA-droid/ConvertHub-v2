@@ -57,12 +57,18 @@ function sendProgressToRenderer(payload) {
 
 function relayConversionProgress(payload) {
     const progressKey = payload.fileId || '__single__';
-    const state = progressDispatchState.get(progressKey) || {
-        lastSentAt: 0,
-        lastPercent: -1,
-        timeout: null,
-        pendingPayload: null
-    };
+    let state = progressDispatchState.get(progressKey);
+    
+    if (!state) {
+        state = {
+            lastSentAt: 0,
+            lastPercent: -1,
+            timeout: null,
+            pendingPayload: null
+        };
+        progressDispatchState.set(progressKey, state);
+    }
+
     const now = Date.now();
     const isFinalUpdate = payload.percent >= 100;
     const elapsed = now - state.lastSentAt;
@@ -80,10 +86,7 @@ function relayConversionProgress(payload) {
 
         if (nextPayload.percent >= 100) {
             progressDispatchState.delete(progressKey);
-            return;
         }
-
-        progressDispatchState.set(progressKey, state);
     };
 
     if (isFinalUpdate || payload.percent <= state.lastPercent || elapsed >= PROGRESS_EVENT_INTERVAL_MS) {
@@ -103,8 +106,6 @@ function relayConversionProgress(payload) {
             }
         }, Math.max(PROGRESS_EVENT_INTERVAL_MS - elapsed, 0));
     }
-
-    progressDispatchState.set(progressKey, state);
 }
 
 function createWindow() {
@@ -296,6 +297,11 @@ ipcMain.handle('cancel-conversion', async () => {
     return manager.cancelActiveConversions?.('Conversion stopped.') || { success: false, cancelledCount: 0 };
 });
 
+ipcMain.handle('cancel-file', async (_event, { fileId }) => {
+    const manager = getConversionManager();
+    return manager.cancelConversionById?.(fileId, 'Conversion stopped.') || { success: false };
+});
+
 // ─── Get supported format lists ─────────────────────────────────
 ipcMain.handle('convert-batch', async (_event, data) => {
     const manager = getConversionManager();
@@ -415,4 +421,15 @@ ipcMain.handle('open:path', async (_event, targetPath) => {
 // ─── Get default output path (user's Downloads) ─────────────────
 ipcMain.handle('get-default-output', () => {
     return app.getPath('downloads');
+});
+
+const fs = require('fs');
+
+ipcMain.handle('path-exists', async (_event, { path: targetPath }) => {
+    try {
+        await fs.promises.access(targetPath, fs.constants.F_OK);
+        return true;
+    } catch {
+        return false;
+    }
 });
