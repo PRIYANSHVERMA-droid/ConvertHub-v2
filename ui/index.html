@@ -5,6 +5,7 @@
     <title>ConvertHub v2</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
 </head>
 <body data-theme="dark">
     <!-- Animated Background Blobs -->
@@ -26,6 +27,7 @@
             <div class="logo">
                 <i class="fa-solid fa-bolt text-gradient"></i>
                 <h2>ConvertHub <span>v2</span></h2>
+                <button id="header-home-btn" class="icon-btn no-drag hidden" title="Back to Launchpad" style="margin-left: 15px; font-size: 14px;"><i class="fa-solid fa-house"></i></button>
             </div>
             <div class="titlebar-fill" aria-hidden="true"></div>
             
@@ -44,138 +46,377 @@
             </div>
         </header>
 
-        <!-- Main Layout Split -->
-        <div class="layout-grid">
-            
-            <!-- Main Area (Left) -->
-            <main class="main-area">
-                
-                <!-- Upload Zone -->
-                <div class="upload-zone no-drag" id="upload-zone">
-                    <input type="file" id="file-input" multiple style="display: none;">
-                    <div class="upload-content">
-                        <i class="fa-solid fa-cloud-arrow-up cloud-icon"></i>
-                        <h3>Drop files here</h3>
-                        <p>or click to browse &bull; supports multiple files</p>
-                    </div>
-                    <div class="upload-glow"></div>
+        <!-- Launchpad Workspace -->
+        <div id="launchpad-workspace" class="workspace-panel">
+            <div class="launchpad-container">
+                <div class="launchpad-header">
+                    <h1>Where would you like to work today?</h1>
+                    <p>Select a dedicated workspace to get started</p>
                 </div>
-
-                <!-- Conversion Type -->
-                <section class="conversion-type">
-                    <h4>Select Conversion Type</h4>
-                    <div class="type-cards">
-                        <div class="type-card active no-drag" data-type="audio">
-                            <div class="icon-wrapper audio"><i class="fa-solid fa-music"></i></div>
-                            <span>Audio</span>
-                        </div>
-                        <div class="type-card no-drag" data-type="video">
-                            <div class="icon-wrapper video"><i class="fa-solid fa-film"></i></div>
-                            <span>Video</span>
-                        </div>
-                        <div class="type-card no-drag" data-type="image">
-                            <div class="icon-wrapper image"><i class="fa-regular fa-image"></i></div>
-                            <span>Image</span>
-                        </div>
-                        <div class="type-card no-drag" data-type="document">
-                            <div class="icon-wrapper document"><i class="fa-regular fa-file-lines"></i></div>
-                            <span>Document</span>
-                        </div>
-                        <div class="type-card no-drag" data-type="archive">
-                            <div class="icon-wrapper archive"><i class="fa-regular fa-file-zipper"></i></div>
-                            <span>Archive</span>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Queue -->
-                <section class="queue-section">
-                    <div class="queue-header">
-                        <h4>Conversion Queue <span class="queue-count" id="queue-count"></span></h4>
-                        <button class="clear-btn no-drag" id="clear-queue-btn"><i class="fa-solid fa-trash-can"></i> Clear Queue</button>
-                    </div>
-                    <div class="batch-status hidden" id="batch-status">
-                        <div class="batch-status-copy">
-                            <span class="batch-status-title" id="batch-status-title">Conversion progress</span>
-                            <span class="batch-status-meta" id="batch-status-meta">0 completed • 0 remaining</span>
-                        </div>
-                        <div class="batch-progress-bar">
-                            <div class="batch-progress-fill" id="batch-progress-fill"></div>
-                        </div>
-                    </div>
-                    <div class="queue-list" id="queue-list">
-                        <div class="queue-empty" id="queue-empty">
-                            <i class="fa-regular fa-folder-open"></i>
-                            <p>No files in queue. Drop files above to get started.</p>
-                        </div>
-                    </div>
-                </section>
-
-            </main>
-
-            <!-- Sidebar (Right) -->
-            <aside class="sidebar">
                 
-                <!-- Recent Files -->
-                <section class="sidebar-section recent-files-section">
-                    <h4>Recent Conversions</h4>
-                    <div class="recent-list" id="recent-list">
-                        <!-- Recent items loaded from localStorage -->
+                <div class="launchpad-cards">
+                    <!-- Universal Converter Card -->
+                    <div class="launchpad-card card-converter no-drag" id="launch-converter-btn">
+                        <div class="card-glow"></div>
+                        <div class="card-icon"><i class="fa-solid fa-arrows-spin"></i></div>
+                        <h3>Universal File Converter</h3>
+                        <p>Batch convert audio, video, images, documents, and archives with fine-tuned presets.</p>
+                        <div class="card-badges">
+                            <span class="badge audio"><i class="fa-solid fa-music"></i> Audio</span>
+                            <span class="badge video"><i class="fa-solid fa-film"></i> Video</span>
+                            <span class="badge image"><i class="fa-regular fa-image"></i> Image</span>
+                            <span class="badge document"><i class="fa-regular fa-file-lines"></i> Docs</span>
+                            <span class="badge archive"><i class="fa-regular fa-file-zipper"></i> Zip</span>
+                        </div>
                     </div>
-                    <button class="outline-btn no-drag" id="clear-recent-btn">Clear All</button>
-                </section>
+                    
+                    <!-- PDF Toolkit Card -->
+                    <div class="launchpad-card card-pdf no-drag" id="launch-pdf-btn">
+                        <div class="card-glow"></div>
+                        <div class="card-icon"><i class="fa-solid fa-file-pdf"></i></div>
+                        <h3>Smart PDF Toolkit</h3>
+                        <p>Combine multiple images into a single PDF, extract high-quality image assets from PDFs, or manage pages.</p>
+                        <div class="card-badges">
+                            <span class="badge doc-pdf"><i class="fa-regular fa-file-pdf"></i> Images to PDF</span>
+                            <span class="badge doc-extract"><i class="fa-solid fa-file-image"></i> PDF to Images</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="launchpad-footer">
+                    <label class="toggle-row no-drag" for="bypass-launchpad-checkbox">
+                        <div class="checkbox-container">
+                            <input id="bypass-launchpad-checkbox" type="checkbox">
+                            <span class="checkbox-custom"></span>
+                        </div>
+                        <span class="toggle-label">Always bypass this screen and open my last active workspace</span>
+                    </label>
+                </div>
+            </div>
+        </div>
 
-                <!-- Output Settings -->
-                <section class="sidebar-section settings-section">
-                    <h4>Output Settings</h4>
-                    <div class="settings-scope-row">
-                        <p class="settings-scope-label" id="output-scope-label">Editing: Audio group</p>
-                        <button id="reset-file-override-btn" class="outline-btn no-drag scope-reset-btn hidden">Use Group Default</button>
+        <!-- Converter Workspace -->
+        <div id="converter-workspace" class="workspace-panel hidden">
+            <!-- Main Layout Split -->
+            <div class="layout-grid">
+                
+                <!-- Main Area (Left) -->
+                <main class="main-area">
+                    
+                    <!-- Upload Zone -->
+                    <div class="upload-zone no-drag" id="upload-zone">
+                        <input type="file" id="file-input" multiple style="display: none;">
+                        <div class="upload-content">
+                            <i class="fa-solid fa-cloud-arrow-up cloud-icon"></i>
+                            <h3>Drop files here</h3>
+                            <p>or click to browse &bull; supports multiple files</p>
+                        </div>
+                        <div class="upload-glow"></div>
                     </div>
-                    <div class="settings-form-scroll">
-                        <div class="form-group">
-                            <label>Preset:</label>
-                            <select id="preset-select" class="glass-input no-drag">
-                                <!-- Populated dynamically -->
-                            </select>
+
+                    <!-- Conversion Type -->
+                    <section class="conversion-type">
+                        <h4>Select Conversion Type</h4>
+                        <div class="type-cards">
+                            <div class="type-card active no-drag" data-type="audio">
+                                <div class="icon-wrapper audio"><i class="fa-solid fa-music"></i></div>
+                                <span>Audio</span>
+                            </div>
+                            <div class="type-card no-drag" data-type="video">
+                                <div class="icon-wrapper video"><i class="fa-solid fa-film"></i></div>
+                                <span>Video</span>
+                            </div>
+                            <div class="type-card no-drag" data-type="image">
+                                <div class="icon-wrapper image"><i class="fa-regular fa-image"></i></div>
+                                <span>Image</span>
+                            </div>
+                            <div class="type-card no-drag" data-type="document">
+                                <div class="icon-wrapper document"><i class="fa-regular fa-file-lines"></i></div>
+                                <span>Document</span>
+                            </div>
+                            <div class="type-card no-drag" data-type="archive">
+                                <div class="icon-wrapper archive"><i class="fa-regular fa-file-zipper"></i></div>
+                                <span>Archive</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Queue -->
+                    <section class="queue-section">
+                        <div class="queue-header">
+                            <h4>Conversion Queue <span class="queue-count" id="queue-count"></span></h4>
+                            <button class="clear-btn no-drag" id="clear-queue-btn"><i class="fa-solid fa-trash-can"></i> Clear Queue</button>
+                        </div>
+                        <div class="batch-status hidden" id="batch-status">
+                            <div class="batch-status-copy">
+                                <span class="batch-status-title" id="batch-status-title">Conversion progress</span>
+                                <span class="batch-status-meta" id="batch-status-meta">0 completed • 0 remaining</span>
+                            </div>
+                            <div class="batch-progress-bar">
+                                <div class="batch-progress-fill" id="batch-progress-fill"></div>
+                            </div>
+                        </div>
+                        <div class="queue-list" id="queue-list">
+                            <div class="queue-empty" id="queue-empty">
+                                <i class="fa-regular fa-folder-open"></i>
+                                <p>No files in queue. Drop files above to get started.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                </main>
+
+                <!-- Sidebar (Right) -->
+                <aside class="sidebar">
+                    
+                    <!-- Recent Files -->
+                    <section class="sidebar-section recent-files-section">
+                        <h4>Recent Conversions</h4>
+                        <div class="recent-list" id="recent-list">
+                            <!-- Recent items loaded from localStorage -->
+                        </div>
+                        <button class="outline-btn no-drag" id="clear-recent-btn">Clear All</button>
+                    </section>
+
+                    <!-- Output Settings -->
+                    <section class="sidebar-section settings-section">
+                        <h4>Output Settings</h4>
+                        <div class="settings-scope-row">
+                            <p class="settings-scope-label" id="output-scope-label">Editing: Audio group</p>
+                            <button id="reset-file-override-btn" class="outline-btn no-drag scope-reset-btn hidden">Use Group Default</button>
+                        </div>
+                        <div class="settings-form-scroll">
+                            <div class="form-group">
+                                <label>Preset:</label>
+                                <select id="preset-select" class="glass-input no-drag">
+                                    <!-- Populated dynamically -->
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Format:</label>
+                                <select id="output-format" class="glass-input no-drag">
+                                    <!-- Populated dynamically -->
+                                </select>
+                            </div>
+                            
+                            <div class="form-group quality-group">
+                                <label>Quality: <span id="quality-value" class="quality-value">80%</span></label>
+                                <input type="range" min="1" max="100" value="80" class="glass-slider no-drag" id="quality-slider">
+                                <div class="slider-labels">
+                                    <span>Low</span>
+                                    <span>Medium</span>
+                                    <span>High</span>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group folder-group">
+                                <label>Output Folder</label>
+                                <div class="folder-input-wrapper">
+                                    <input type="text" id="output-folder-input" readonly class="glass-input" placeholder="Same as source">
+                                    <button class="icon-btn-small no-drag" id="pick-folder-btn" title="Browse folder"><i class="fa-regular fa-folder"></i></button>
+                                    <button class="icon-btn-small no-drag" id="open-folder-btn" title="Open folder"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
+                                </div>
+                                <p class="settings-help">If a matching file name already exists, ConvertHub saves a numbered copy instead of overwriting it.</p>
+                            </div>
                         </div>
 
-                        <div class="form-group">
-                            <label>Format:</label>
-                            <select id="output-format" class="glass-input no-drag">
-                                <!-- Populated dynamically -->
-                            </select>
+                        <div class="settings-footer-bar">
+                            <button id="convert-btn" class="primary-btn glow-btn no-drag">
+                                <i class="fa-solid fa-play"></i> Start Conversion
+                            </button>
                         </div>
-                        
-                        <div class="form-group quality-group">
-                            <label>Quality: <span id="quality-value" class="quality-value">80%</span></label>
-                            <input type="range" min="1" max="100" value="80" class="glass-slider no-drag" id="quality-slider">
-                            <div class="slider-labels">
-                                <span>Low</span>
-                                <span>Medium</span>
-                                <span>High</span>
+                    </section>
+
+                </aside>
+            </div>
+        </div>
+
+        <!-- PDF Workspace -->
+        <div id="pdf-workspace" class="workspace-panel hidden">
+            <div class="pdf-workspace-container">
+                <div class="pdf-workspace-header">
+                    <div class="pdf-header-left">
+                        <h2><i class="fa-solid fa-file-pdf text-gradient-pdf"></i> PDF Toolkit</h2>
+                        <p>Convert images to PDF or extract images from PDF files.</p>
+                    </div>
+                    <div class="pdf-mode-tabs no-drag">
+                        <button class="pdf-tab active" data-mode="img-to-pdf" id="pdf-tab-img-to-pdf"><i class="fa-regular fa-image"></i> Images to PDF</button>
+                        <button class="pdf-tab" data-mode="pdf-to-img" id="pdf-tab-pdf-to-img"><i class="fa-regular fa-image"></i> PDF to Images</button>
+                    </div>
+                </div>
+                
+                <div class="pdf-layout-grid">
+                    <main class="pdf-main-area">
+                        <div id="panel-img-to-pdf" class="pdf-panel">
+                            <div class="pdf-upload-zone no-drag" id="pdf-img-dropzone">
+                                <input type="file" id="pdf-img-input" multiple accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;">
+                                <div class="upload-content">
+                                    <div class="pdf-drop-icon"><i class="fa-regular fa-image"></i></div>
+                                    <h3>Drop images here</h3>
+                                    <p>PNG, JPG, JPEG, WEBP and more</p>
+                                    <button class="pdf-browse-btn no-drag" type="button"><i class="fa-regular fa-folder"></i> Browse Files</button>
+                                    <span class="pdf-drop-note"><i class="fa-solid fa-lock"></i> You can also drag &amp; drop files or folders</span>
+                                </div>
+                            </div>
+                            
+                            <div class="pdf-image-grid-section hidden" id="pdf-image-grid-section">
+                                <div class="grid-header">
+                                    <h4>Uploaded Files (<span id="pdf-img-count">0</span>)</h4>
+                                    <button class="clear-btn no-drag" id="pdf-img-clear-btn"><i class="fa-regular fa-trash-can"></i> Clear All</button>
+                                </div>
+                                <div class="pdf-uploaded-list" id="pdf-thumbnails-grid"></div>
+                                <p class="pdf-reorder-note"><i class="fa-solid fa-circle-info"></i> Drag to reorder images. They will appear in this order in the PDF.</p>
                             </div>
                         </div>
                         
-                        <div class="form-group folder-group">
-                            <label>Output Folder</label>
-                            <div class="folder-input-wrapper">
-                                <input type="text" id="output-folder-input" readonly class="glass-input" placeholder="Same as source">
-                                <button class="icon-btn-small no-drag" id="pick-folder-btn" title="Browse folder"><i class="fa-regular fa-folder"></i></button>
-                                <button class="icon-btn-small no-drag" id="open-folder-btn" title="Open folder"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
+                        <div id="panel-pdf-to-img" class="pdf-panel hidden">
+                            <div class="pdf-upload-zone no-drag" id="pdf-file-dropzone">
+                                <input type="file" id="pdf-file-input" accept=".pdf" style="display: none;">
+                                <div class="upload-content">
+                                    <div class="pdf-drop-icon pdf-drop-icon-file"><i class="fa-regular fa-file-pdf"></i></div>
+                                    <h3>Drop PDF here</h3>
+                                    <p>Select a PDF and export each page as a high-quality image.</p>
+                                    <button class="pdf-browse-btn no-drag" type="button"><i class="fa-regular fa-folder"></i> Browse Files</button>
+                                </div>
                             </div>
-                            <p class="settings-help">If a matching file name already exists, ConvertHub saves a numbered copy instead of overwriting it.</p>
+                            
+                            <div class="pdf-file-details hidden" id="pdf-file-details">
+                                <div class="pdf-file-card">
+                                    <i class="fa-solid fa-file-lines file-large-icon"></i>
+                                    <div class="file-details-info">
+                                        <h3 id="pdf-detail-name">document.pdf</h3>
+                                        <p id="pdf-detail-meta">0.0 MB &bull; 0 pages</p>
+                                    </div>
+                                    <button class="icon-btn no-drag pdf-remove-file-btn" id="pdf-remove-file-btn" title="Remove PDF"><i class="fa-solid fa-xmark"></i></button>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-
-                    <div class="settings-footer-bar">
-                        <button id="convert-btn" class="primary-btn glow-btn no-drag">
-                            <i class="fa-solid fa-play"></i> Start Conversion
-                        </button>
-                    </div>
-                </section>
-
-            </aside>
+                    </main>
+                    
+                    <aside class="pdf-sidebar">
+                        <section class="pdf-sidebar-section" id="sidebar-img-to-pdf">
+                            <div class="pdf-sidebar-title">
+                                <h4><i class="fa-solid fa-sliders"></i> PDF Settings</h4>
+                                <i class="fa-solid fa-chevron-up"></i>
+                            </div>
+                            <div class="settings-form-scroll">
+                                <div class="form-group">
+                                    <label>Output Filename</label>
+                                    <div class="pdf-name-field">
+                                        <input type="text" id="pdf-output-name" class="glass-input no-drag" value="Compiled_Images" placeholder="e.g. document">
+                                        <span>.pdf</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Page Size</label>
+                                    <select id="pdf-page-size" class="glass-input no-drag">
+                                        <option value="A4" selected>A4 (210 x 297mm)</option>
+                                        <option value="LETTER">Letter (8.5 x 11in)</option>
+                                        <option value="FIT">Fit to Image dimensions</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" id="pdf-page-orientation-group">
+                                    <label>Orientation</label>
+                                    <select id="pdf-page-orientation" class="glass-input no-drag">
+                                        <option value="PORTRAIT" selected>Portrait</option>
+                                        <option value="LANDSCAPE">Landscape</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Margins</label>
+                                    <select id="pdf-page-margin" class="glass-input no-drag">
+                                        <option value="NONE" selected>None (Full bleed)</option>
+                                        <option value="SMALL">Small (15px)</option>
+                                        <option value="LARGE">Large (30px)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group folder-group">
+                                    <label>Output Folder</label>
+                                    <div class="folder-input-wrapper">
+                                        <input type="text" id="pdf-output-folder-input" readonly class="glass-input" placeholder="Same as source">
+                                        <button class="icon-btn-small no-drag" id="pdf-pick-folder-btn" title="Browse folder"><i class="fa-regular fa-folder"></i></button>
+                                        <button class="icon-btn-small no-drag" id="pdf-open-folder-btn" title="Open folder"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="pdf-advanced-toggle no-drag" type="button" id="pdf-advanced-toggle-btn">
+                                <span><strong>Advanced Options</strong><small>Page range, compression, and more</small></span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </button>
+                            <div class="pdf-advanced-options-content hidden" id="pdf-advanced-options-content" style="padding: 0 22px 22px;">
+                                <div class="form-group">
+                                    <label for="pdf-page-range-input">Page Range</label>
+                                    <input type="text" id="pdf-page-range-input" class="glass-input no-drag" placeholder="e.g. 1-3, 5 (all if empty)">
+                                </div>
+                                <div class="form-group">
+                                    <label>Image Quality / Compression: <span id="pdf-quality-val" style="float: right; color: #8b5cf6; font-weight: 700;">100%</span></label>
+                                    <input type="range" min="10" max="100" value="100" class="glass-slider no-drag" id="pdf-quality-slider">
+                                    <div class="slider-labels" style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 5px;">
+                                        <span>10% (High Comp)</span>
+                                        <span>100% (Original)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="settings-footer-bar">
+                                <button id="pdf-compile-btn" class="primary-btn glow-btn no-drag" disabled>
+                                    <i class="fa-solid fa-file-pdf"></i> Compile into PDF <i class="fa-solid fa-arrow-right"></i>
+                                </button>
+                            </div>
+                        </section>
+                        
+                        <section class="pdf-sidebar-section hidden" id="sidebar-pdf-to-img">
+                            <div class="pdf-sidebar-title">
+                                <h4><i class="fa-solid fa-sliders"></i> Extract Settings</h4>
+                                <i class="fa-solid fa-chevron-up"></i>
+                            </div>
+                            <div class="settings-form-scroll">
+                                <div class="form-group">
+                                    <label>Extract Format</label>
+                                    <select id="pdf-extract-format" class="glass-input no-drag">
+                                        <option value="png" selected>PNG (Lossless)</option>
+                                        <option value="jpg">JPEG (Lossy)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Pages to Extract</label>
+                                    <select id="pdf-extract-range-type" class="glass-input no-drag">
+                                        <option value="ALL" selected>All Pages</option>
+                                        <option value="CUSTOM">Specific Pages</option>
+                                    </select>
+                                </div>
+                                <div class="form-group hidden" id="pdf-extract-range-group">
+                                    <label>Page Range</label>
+                                    <input type="text" id="pdf-extract-range-input" class="glass-input no-drag" placeholder="e.g. 1,3,5-8">
+                                    <p class="settings-help">Enter comma-separated values or ranges (e.g. 1-3, 5).</p>
+                                </div>
+                                <div class="form-group">
+                                    <label>Image Width (px): <span id="pdf-width-val">1200px</span></label>
+                                    <input type="range" min="600" max="3000" step="100" value="1200" class="glass-slider no-drag" id="pdf-width-slider">
+                                    <div class="slider-labels">
+                                        <span>600px</span>
+                                        <span>1800px</span>
+                                        <span>3000px</span>
+                                    </div>
+                                </div>
+                                <div class="form-group folder-group">
+                                    <label>Output Folder</label>
+                                    <div class="folder-input-wrapper">
+                                        <input type="text" id="pdf-extract-folder-input" readonly class="glass-input" placeholder="Same as source">
+                                        <button class="icon-btn-small no-drag" id="pdf-extract-pick-folder-btn" title="Browse folder"><i class="fa-regular fa-folder"></i></button>
+                                        <button class="icon-btn-small no-drag" id="pdf-extract-open-folder-btn" title="Open folder"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="settings-footer-bar">
+                                <button id="pdf-extract-btn" class="primary-btn glow-btn no-drag" disabled>
+                                    <i class="fa-solid fa-file-image"></i> Extract Images <i class="fa-solid fa-arrow-right"></i>
+                                </button>
+                            </div>
+                        </section>
+                    </aside>
+                </div>
+            </div>
         </div>
 
         <div class="settings-overlay hidden" id="settings-overlay">

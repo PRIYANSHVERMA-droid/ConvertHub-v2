@@ -1,5 +1,19 @@
-const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, protocol, net } = require('electron');
 const path = require('path');
+
+protocol.registerSchemesAsPrivileged([
+    {
+        scheme: 'converthub-media',
+        privileges: {
+            secure: true,
+            standard: true,
+            supportFetchAPI: true,
+            bypassCSP: true,
+            stream: true
+        }
+    }
+]);
+
 
 let mainWindow;
 let conversionManager = null;
@@ -114,14 +128,15 @@ function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1200,
         height: 800,
-        frame: false,
+        frame: true,
         icon: appIconPath,
         backgroundColor: '#0f111a', // Space background color
         webPreferences: {
             preload: preloadPath,
             nodeIntegration: false,
             contextIsolation: true
-        }
+        },
+        titleBarStyle: 'hidden'
     });
 
     mainWindow.loadFile(path.join(__dirname, 'ui/index.html'));
@@ -161,7 +176,22 @@ function createWindow() {
     mainWindow.webContents.once('did-finish-load', emitWindowState);
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+    protocol.handle('converthub-media', (request) => {
+        try {
+            const url = new URL(request.url);
+            const filePath = url.searchParams.get('path');
+            if (!filePath) {
+                return new Response('Path parameter is missing', { status: 400 });
+            }
+            return net.fetch('file:///' + filePath);
+        } catch (e) {
+            return new Response('Error loading file: ' + e.message, { status: 500 });
+        }
+    });
+    createWindow();
+});
+
 
 // Window controls IPC
 ipcMain.handle('window-minimize', (event) => {
@@ -345,14 +375,6 @@ ipcMain.handle('convert-batch', async (_event, data) => {
     }
 });
 
-ipcMain.handle('get-formats', () => {
-    return getConversionManager().FORMAT_TYPES;
-});
-
-ipcMain.handle('get-engine-status', () => {
-    return getConversionManager().getEngineStatus();
-});
-
 // ─── Output Folder Picker ───────────────────────────────────────
 ipcMain.handle('select-output-folder', async () => {
     const result = await dialog.showOpenDialog(mainWindow, {
@@ -425,6 +447,65 @@ ipcMain.handle('get-default-output', () => {
 
 const fs = require('fs');
 
+let pdfProcessor = null;
+function getPDFProcessor() {
+    if (!pdfProcessor) {
+        pdfProcessor = require('./core/pdfProcessor');
+    }
+    return pdfProcessor;
+}
+
+// ─── PDF Toolkit IPC Handlers ────────────────────────────────────
+ipcMain.handle('pdf:create', async (_event, data) => {
+    try {
+        const processor = getPDFProcessor();
+        return await processor.compileImagesToPDF(data);
+    } catch (error) {
+        console.error('[main] Error in pdf:create:', error);
+        return { success: false, error: error.message || 'Failed to create PDF.' };
+    }
+});
+
+ipcMain.handle('pdf:save-page', async (_event, data) => {
+    try {
+        const processor = getPDFProcessor();
+        return await processor.saveExtractedPage(data);
+    } catch (error) {
+        console.error('[main] Error in pdf:save-page:', error);
+        return { success: false, error: error.message || 'Failed to save page image.' };
+    }
+});
+
+ipcMain.handle('pdf:read-folder-images', async (_event, { folderPath }) => {
+    try {
+        const results = [];
+        async function scan(dir) {
+            const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+            for (const entry of entries) {
+                const fullPath = path.join(dir, entry.name);
+                if (entry.isDirectory()) {
+                    await scan(fullPath);
+                } else if (entry.isFile()) {
+                    const ext = path.extname(entry.name).toLowerCase();
+                    if (['.png', '.jpg', '.jpeg', '.webp'].includes(ext)) {
+                        const stat = await fs.promises.stat(fullPath);
+                        results.push({
+                            name: entry.name,
+                            path: fullPath,
+                            size: stat.size
+                        });
+                    }
+                }
+            }
+        }
+        await scan(folderPath);
+        return { success: true, files: results };
+    } catch (error) {
+        console.error('[main] Error in pdf:read-folder-images:', error);
+        return { success: false, error: error.message };
+    }
+});
+
 ipcMain.handle('path-exists', async (_event, { path: targetPath }) => {
     try {
         await fs.promises.access(targetPath, fs.constants.F_OK);
@@ -433,3 +514,17 @@ ipcMain.handle('path-exists', async (_event, { path: targetPath }) => {
         return false;
     }
 });
+
+// Ensure 'get-formats' handler is registered only once
+if (!ipcMain.eventNames().includes('get-formats')) {
+    ipcMain.handle('get-formats', () => {
+        return getConversionManager().FORMAT_TYPES;
+    });
+}
+
+// Ensure 'get-engine-status' handler is registered only once
+if (!ipcMain.eventNames().includes('get-engine-status')) {
+    ipcMain.handle('get-engine-status', () => {
+        return getConversionManager().getEngineStatus();
+    });
+}

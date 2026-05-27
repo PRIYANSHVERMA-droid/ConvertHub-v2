@@ -62,6 +62,12 @@ contextBridge.exposeInMainWorld('app', {
     getFormats: () => ipcRenderer.invoke('get-formats'),
     getEngineStatus: () => ipcRenderer.invoke('get-engine-status'),
 
+    // PDF Toolkit
+    createPDF: (data) => ipcRenderer.invoke('pdf:create', data),
+    saveExtractedPage: (data) => ipcRenderer.invoke('pdf:save-page', data),
+    readFolderImages: (folderPath) => ipcRenderer.invoke('pdf:read-folder-images', { folderPath }),
+
+
     // Progress listener
     onProgress: (callback) => {
         ipcRenderer.on('conversion-progress', (_event, data) => callback(data));
