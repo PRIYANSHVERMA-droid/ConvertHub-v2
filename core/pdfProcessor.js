@@ -1,9 +1,10 @@
 const fs = require('fs');
 const path = require('path');
-const { PDFDocument } = require('pdf-lib');
+const { PDFDocument, rgb } = require('pdf-lib');
 const os = require('os');
 const { spawn } = require('child_process');
 const conversionManager = require('./conversionManager');
+const { encryptPDF } = require('@pdfsmaller/pdf-encrypt');
 
 // Page sizes in PostScript points (72 points per inch)
 const PAGE_SIZES = {
@@ -16,6 +17,15 @@ const MARGINS = {
     SMALL: 15,
     LARGE: 30
 };
+
+function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16) / 255,
+        g: parseInt(result[2], 16) / 255,
+        b: parseInt(result[3], 16) / 255
+    } : { r: 1, g: 1, b: 1 };
+}
 
 /**
  * Creates a unique output path in the target folder.
@@ -44,6 +54,18 @@ async function getFfmpegPath() {
     } catch {
         return 'ffmpeg';
     }
+}
+
+async function getSevenZipPath() {
+    const localPath = process.platform === 'win32'
+        ? path.resolve(__dirname, '..', 'engines', '7zip', '7za.exe')
+        : null;
+
+    if (localPath && fs.existsSync(localPath)) {
+        return localPath;
+    }
+
+    return process.platform === 'win32' ? '7za.exe' : '7z';
 }
 
 function compressImage(ffmpegPath, inputPath, outputPath, quality) {
@@ -79,7 +101,7 @@ function compressImage(ffmpegPath, inputPath, outputPath, quality) {
 /**
  * Compiles a list of image paths into a single PDF.
  */
-async function compileImagesToPDF({ imagePaths, outputFolder, pdfName, pageSize = 'A4', orientation = 'PORTRAIT', marginType = 'NONE', quality = 100 }) {
+async function compileImagesToPDF({ imagePaths, outputFolder, pdfName, pageSize = 'A4', orientation = 'PORTRAIT', marginType = 'NONE', quality = 100, layout = 'CENTER', pageNumbers = false, backgroundColor = '#ffffff', title = '', author = '', password = '' }) {
     if (!imagePaths || !Array.isArray(imagePaths) || imagePaths.length === 0) {
         throw new Error('No images selected for PDF creation.');
     }
@@ -94,13 +116,17 @@ async function compileImagesToPDF({ imagePaths, outputFolder, pdfName, pageSize 
 
     // Create a new PDF Document
     const pdfDoc = await PDFDocument.create();
+    if (title) pdfDoc.setTitle(title);
+    if (author) pdfDoc.setAuthor(author);
 
     const marginValue = MARGINS[marginType.toUpperCase()] ?? 0;
     const isLandscape = orientation.toUpperCase() === 'LANDSCAPE';
     const ffmpegPath = await getFfmpegPath();
     const tempFiles = [];
+    const bgColor = hexToRgb(backgroundColor);
 
     try {
+        let pageIdx = 1;
         for (const imgPath of imagePaths) {
             if (!fs.existsSync(imgPath)) {
                 console.warn(`[pdfProcessor] Image does not exist, skipping: ${imgPath}`);
@@ -132,11 +158,17 @@ async function compileImagesToPDF({ imagePaths, outputFolder, pdfName, pageSize 
             } else if (ext === '.jpg' || ext === '.jpeg') {
                 image = await pdfDoc.embedJpg(imgBytes);
             } else {
-                // Fallback: try embedding as JPEG
+                // Fallback for unsupported types like WEBP: convert to JPEG before embedding
                 try {
-                    image = await pdfDoc.embedJpg(imgBytes);
-                } catch (e) {
-                    console.warn(`[pdfProcessor] Failed to embed image as JPEG, skipping: ${imgPath}`, e);
+                    const tempOutPath = path.join(os.tmpdir(), `converthub_pdf_${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`);
+                    await compressImage(ffmpegPath, currentPath, tempOutPath, Math.min(Math.max(quality, 10), 100));
+                    currentPath = tempOutPath;
+                    tempFiles.push(tempOutPath);
+                    const jpegBytes = await fs.promises.readFile(currentPath);
+                    image = await pdfDoc.embedJpg(jpegBytes);
+                    ext = '.jpg';
+                } catch (conversionError) {
+                    console.warn(`[pdfProcessor] Failed to convert unsupported image format to JPEG, skipping: ${imgPath}`, conversionError);
                     continue;
                 }
             }
@@ -164,17 +196,33 @@ async function compileImagesToPDF({ imagePaths, outputFolder, pdfName, pageSize 
             // Add a page to the PDF
             const page = pdfDoc.addPage([pageWidth, pageHeight]);
 
+            // Background Color
+            page.drawRectangle({
+                x: 0,
+                y: 0,
+                width: pageWidth,
+                height: pageHeight,
+                color: rgb(bgColor.r, bgColor.g, bgColor.b),
+            });
+
             // Scale image to fit the page bounds (accounting for margins)
             const availWidth = pageWidth - (2 * marginValue);
             const availHeight = pageHeight - (2 * marginValue);
 
-            const scale = Math.min(availWidth / imgWidth, availHeight / imgHeight);
-            const placedWidth = imgWidth * scale;
-            const placedHeight = imgHeight * scale;
+            let placedWidth, placedHeight, x, y;
 
-            // Center the image inside the margins
-            const x = marginValue + (availWidth - placedWidth) / 2;
-            const y = marginValue + (availHeight - placedHeight) / 2;
+            if (layout.toUpperCase() === 'STRETCH') {
+                placedWidth = availWidth;
+                placedHeight = availHeight;
+                x = marginValue;
+                y = marginValue;
+            } else {
+                const scale = Math.min(availWidth / imgWidth, availHeight / imgHeight);
+                placedWidth = imgWidth * scale;
+                placedHeight = imgHeight * scale;
+                x = marginValue + (availWidth - placedWidth) / 2;
+                y = marginValue + (availHeight - placedHeight) / 2;
+            }
 
             page.drawImage(image, {
                 x,
@@ -182,10 +230,34 @@ async function compileImagesToPDF({ imagePaths, outputFolder, pdfName, pageSize 
                 width: placedWidth,
                 height: placedHeight
             });
+
+            if (pageNumbers) {
+                const text = `Page ${pageIdx}`;
+                const fontSize = 10;
+                const textWidth = page.getFont('Helvetica').widthOfTextAtSize(text, fontSize);
+                page.drawText(text, {
+                    x: (pageWidth - textWidth) / 2,
+                    y: marginValue / 2 || 10,
+                    size: fontSize,
+                    color: rgb(0, 0, 0),
+                });
+            }
+            pageIdx++;
         }
 
         // Save the PDF
-        const pdfBytes = await pdfDoc.save();
+        let pdfBytes = await pdfDoc.save();
+        
+        // Encrypt if password is provided
+        if (password) {
+            try {
+                pdfBytes = await encryptPDF(pdfBytes, password);
+            } catch (encErr) {
+                console.warn(`[pdfProcessor] Encryption failed:`, encErr);
+                // We continue with unencrypted PDF but log the warning
+            }
+        }
+
         const cleanName = pdfName ? pdfName.trim().replace(/[/\\?%*:|"<>]/g, '_') : 'Compiled_Images';
         const finalPath = createUniquePath(outputFolder, cleanName, 'pdf');
 
@@ -245,7 +317,86 @@ async function saveExtractedPage({ base64Data, outputFolder, fileName }) {
     };
 }
 
+async function createImagesZip({ filePaths, outputFolder, zipName }) {
+    if (!Array.isArray(filePaths) || filePaths.length === 0) {
+        throw new Error('No extracted images were provided for ZIP creation.');
+    }
+    if (!outputFolder) {
+        throw new Error('Output folder is not defined.');
+    }
+
+    await fs.promises.mkdir(outputFolder, { recursive: true });
+
+    const sourceDir = path.dirname(filePaths[0]);
+    const normalizedSourceDir = path.normalize(sourceDir).toLowerCase();
+    const safeFiles = [];
+
+    for (const filePath of filePaths) {
+        if (!filePath || !fs.existsSync(filePath)) {
+            continue;
+        }
+        if (path.normalize(path.dirname(filePath)).toLowerCase() !== normalizedSourceDir) {
+            throw new Error('All images must be in the same folder before creating a ZIP.');
+        }
+        safeFiles.push(path.basename(filePath));
+    }
+
+    if (safeFiles.length === 0) {
+        throw new Error('No extracted image files exist for ZIP creation.');
+    }
+
+    const sevenZipPath = await getSevenZipPath();
+    const cleanName = zipName ? zipName.trim().replace(/[/\\?%*:|"<>]/g, '_') : 'Extracted_Images';
+    const finalPath = createUniquePath(outputFolder, cleanName, 'zip');
+    const listPath = path.join(os.tmpdir(), `converthub_zip_${Date.now()}_${Math.random().toString(36).slice(2)}.txt`);
+
+    try {
+        await fs.promises.writeFile(listPath, safeFiles.join(os.EOL), 'utf8');
+
+        await new Promise((resolve, reject) => {
+            const args = ['a', '-tzip', finalPath, `@${listPath}`, '-y'];
+            const proc = spawn(sevenZipPath, args, { cwd: sourceDir, windowsHide: true });
+            let stderr = '';
+            let stdout = '';
+
+            proc.stdout.on('data', (chunk) => {
+                stdout += chunk.toString();
+            });
+            proc.stderr.on('data', (chunk) => {
+                stderr += chunk.toString();
+            });
+            proc.on('error', (error) => {
+                reject(new Error(error.code === 'ENOENT'
+                    ? `7-Zip not found at: ${sevenZipPath}`
+                    : `Failed to start 7-Zip: ${error.message}`));
+            });
+            proc.on('close', (code) => {
+                if (code !== 0) {
+                    reject(new Error(stderr.trim() || stdout.trim() || `7-Zip exited with code ${code}`));
+                    return;
+                }
+                resolve();
+            });
+        });
+
+        return {
+            success: true,
+            outputPath: finalPath,
+            fileName: path.basename(finalPath)
+        };
+    } finally {
+        try {
+            if (fs.existsSync(listPath)) {
+                await fs.promises.unlink(listPath);
+            }
+        } catch (error) {
+            console.warn(`[pdfProcessor] Failed to delete ZIP list file ${listPath}:`, error);
+        }
+    }
+}
+
 module.exports = {
     compileImagesToPDF,
-    saveExtractedPage
+    saveExtractedPage,
+    createImagesZip
 };

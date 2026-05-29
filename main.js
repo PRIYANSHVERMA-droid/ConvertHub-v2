@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, protocol, net } = require('electron');
 const path = require('path');
+const { pathToFileURL } = require('url');
 
 protocol.registerSchemesAsPrivileged([
     {
@@ -184,7 +185,7 @@ app.whenReady().then(() => {
             if (!filePath) {
                 return new Response('Path parameter is missing', { status: 400 });
             }
-            return net.fetch('file:///' + filePath);
+            return net.fetch(pathToFileURL(filePath).toString());
         } catch (e) {
             return new Response('Error loading file: ' + e.message, { status: 500 });
         }
@@ -473,6 +474,16 @@ ipcMain.handle('pdf:save-page', async (_event, data) => {
     } catch (error) {
         console.error('[main] Error in pdf:save-page:', error);
         return { success: false, error: error.message || 'Failed to save page image.' };
+    }
+});
+
+ipcMain.handle('pdf:create-images-zip', async (_event, data) => {
+    try {
+        const processor = getPDFProcessor();
+        return await processor.createImagesZip(data);
+    } catch (error) {
+        console.error('[main] Error in pdf:create-images-zip:', error);
+        return { success: false, error: error.message || 'Failed to create ZIP.' };
     }
 });
 

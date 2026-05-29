@@ -153,8 +153,17 @@
     const pdfExtractRangeType = document.getElementById('pdf-extract-range-type');
     const pdfExtractRangeGroup = document.getElementById('pdf-extract-range-group');
     const pdfExtractRangeInput = document.getElementById('pdf-extract-range-input');
+    const pdfResolutionMode = document.getElementById('pdf-resolution-mode');
     const pdfWidthSlider = document.getElementById('pdf-width-slider');
     const pdfWidthVal = document.getElementById('pdf-width-val');
+    const pdfDpiGroup = document.getElementById('pdf-dpi-group');
+    const pdfDpiSelect = document.getElementById('pdf-dpi-select');
+    const pdfJpgQualityGroup = document.getElementById('pdf-jpg-quality-group');
+    const pdfJpgQualitySlider = document.getElementById('pdf-jpg-quality-slider');
+    const pdfJpgQualityVal = document.getElementById('pdf-jpg-quality-val');
+    const pdfFileNaming = document.getElementById('pdf-file-naming');
+    const pdfExtractSubfolder = document.getElementById('pdf-extract-subfolder');
+    const pdfExtractZip = document.getElementById('pdf-extract-zip');
     const pdfExtractFolderInput = document.getElementById('pdf-extract-folder-input');
     const pdfExtractPickFolderBtn = document.getElementById('pdf-extract-pick-folder-btn');
     const pdfExtractOpenFolderBtn = document.getElementById('pdf-extract-open-folder-btn');
@@ -1451,7 +1460,7 @@
         if (readyFiles.length === 0) {
             uploadZone.classList.add('error-shake');
             setTimeout(() => uploadZone.classList.remove('error-shake'), 500);
-            showToast('No files to convert. Add files first!', 'warning');
+            showToast('No files to convert. Add files first!', 'error', 6000);
             return;
         }
 
@@ -1668,7 +1677,7 @@
             type: file.type || ''
         })).filter((file) => {
             const ext = file.name.split('.').pop()?.toLowerCase() || '';
-            return file.path && allowed.has(ext);
+            return (file.path || file.raw) && allowed.has(ext);
         });
     }
 
@@ -1682,7 +1691,7 @@
 
     function updatePdfButtons() {
         if (pdfCompileBtn) {
-            pdfCompileBtn.disabled = pdfImages.length === 0;
+            pdfCompileBtn.disabled = false;
         }
         if (pdfExtractBtn) {
             pdfExtractBtn.disabled = !selectedPdfFile;
@@ -1729,6 +1738,100 @@
             }
         }
         return Array.from(indices).sort((a, b) => a - b).map(idx => paths[idx]);
+    }
+
+    function parsePdfPageSelection(rangeType, rangeInput, totalPages) {
+        if (rangeType !== 'CUSTOM') {
+            return Array.from({ length: totalPages }, (_, index) => index + 1);
+        }
+
+        const pages = new Set();
+        const parts = String(rangeInput || '').split(',');
+
+        for (const part of parts) {
+            const trimmed = part.trim();
+            if (!trimmed) {
+                continue;
+            }
+
+            if (trimmed.includes('-')) {
+                const [startStr, endStr] = trimmed.split('-');
+                const start = parseInt(startStr, 10);
+                const end = parseInt(endStr, 10);
+
+                if (Number.isInteger(start) && Number.isInteger(end)) {
+                    const min = Math.max(1, Math.min(start, end));
+                    const max = Math.min(totalPages, Math.max(start, end));
+                    for (let page = min; page <= max; page++) {
+                        pages.add(page);
+                    }
+                }
+                continue;
+            }
+
+            const page = parseInt(trimmed, 10);
+            if (Number.isInteger(page) && page >= 1 && page <= totalPages) {
+                pages.add(page);
+            }
+        }
+
+        return Array.from(pages).sort((a, b) => a - b);
+    }
+
+    function getPdfStem(fileName) {
+        return String(fileName || 'document').replace(/\.pdf$/i, '') || 'document';
+    }
+
+    function sanitizeFileStem(value) {
+        return String(value || 'document')
+            .trim()
+            .replace(/[<>:"/\\|?*\x00-\x1f]/g, '_')
+            .replace(/\s+/g, '_')
+            .replace(/^_+|_+$/g, '') || 'document';
+    }
+
+    function joinOutputPath(directory, childName) {
+        const separator = String(directory || '').includes('/') && !String(directory || '').includes('\\') ? '/' : '\\';
+        return `${String(directory || '').replace(/[\\/]+$/, '')}${separator}${String(childName || '').replace(/^[\\/]+/, '')}`;
+    }
+
+    function getExtractedPageFileName(pattern, stem, pageNumber, totalPages, format) {
+        const safeStem = sanitizeFileStem(stem);
+        const pageToken = String(pageNumber).padStart(Math.max(3, String(totalPages).length), '0');
+
+        switch (pattern) {
+            case 'stem-number':
+                return `${safeStem}-${pageToken}.${format}`;
+            case 'page_number_stem':
+                return `page_${pageToken}_${safeStem}.${format}`;
+            case 'stem_page_number':
+            default:
+                return `${safeStem}_page_${pageToken}.${format}`;
+        }
+    }
+
+    function getPdfRenderScale(mode, width, dpi, viewport) {
+        if (mode === 'DPI') {
+            return Math.max(0.1, (parseInt(dpi, 10) || 150) / 72);
+        }
+        return Math.max(0.1, (parseInt(width, 10) || 1200) / viewport.width);
+    }
+
+    async function getPdfDocumentBytes(file) {
+        if (file?.raw?.arrayBuffer) {
+            return new Uint8Array(await file.raw.arrayBuffer());
+        }
+
+        if (file?.path) {
+            const sourceUrl = `converthub-media://local-file/?path=${encodeURIComponent(file.path)}`;
+            const response = await fetch(sourceUrl);
+            if (!response.ok) {
+                throw new Error(`Unable to read PDF file (${response.status}).`);
+            }
+            return new Uint8Array(await response.arrayBuffer());
+        }
+
+        throw new Error('Unable to read the selected PDF.');
     }
 
     function renderPdfImageList() {
@@ -1874,6 +1977,9 @@
             }
         });
         pdfImages = [];
+        if (pdfImgInput) {
+            pdfImgInput.value = '';
+        }
         renderPdfImageList();
         updatePdfButtons();
     }
@@ -1889,7 +1995,7 @@
 
     async function compilePdfImages() {
         if (pdfImages.length === 0) {
-            showToast('Add images before compiling a PDF.', 'warning');
+            showToast('Add images before compiling a PDF.', 'error', 6000);
             return;
         }
         const outputFolder = getPdfOutputFolder();
@@ -1900,6 +2006,12 @@
 
         const pageRangeInput = document.getElementById('pdf-page-range-input')?.value || '';
         const qualityVal = parseInt(document.getElementById('pdf-quality-slider')?.value || '100', 10);
+        const imageLayout = document.getElementById('pdf-image-layout')?.value || 'CENTER';
+        const addPageNumbers = document.getElementById('pdf-page-numbers')?.checked || false;
+        const metaTitle = document.getElementById('pdf-meta-title')?.value || '';
+        const metaAuthor = document.getElementById('pdf-meta-author')?.value || '';
+        const pdfPassword = document.getElementById('pdf-password')?.value || '';
+
 
         let selectedPaths = pdfImages.map((item) => item.path);
         if (pageRangeInput.trim()) {
@@ -1923,12 +2035,19 @@
                 pageSize: pdfPageSize?.value || 'A4',
                 orientation: pdfPageOrientation?.value || 'PORTRAIT',
                 marginType: pdfPageMargin?.value || 'NONE',
-                quality: qualityVal
+                quality: qualityVal,
+                layout: imageLayout,
+                pageNumbers: addPageNumbers,
+                title: metaTitle,
+                author: metaAuthor,
+                password: pdfPassword
             });
+
 
             if (result?.success) {
                 showToast(`PDF created: ${result.fileName || 'Compiled_Images.pdf'}`, 'success');
                 addRecentFile(result.fileName || 'Compiled_Images.pdf', 'pdf', result.outputPath);
+                clearPdfImages();
             } else {
                 showToast(result?.error || 'Failed to create PDF.', 'error', 6000);
             }
@@ -1957,6 +2076,9 @@
 
     function clearPdfExtractFile() {
         selectedPdfFile = null;
+        if (pdfFileInput) {
+            pdfFileInput.value = '';
+        }
         pdfFileDetails?.classList.add('hidden');
         pdfFileDropzone?.classList.remove('hidden');
         updatePdfButtons();
@@ -1968,7 +2090,152 @@
             return;
         }
 
-        showToast('PDF extraction UI is ready. Page rendering will use the existing pdf.js workflow next.', 'info', 5000);
+        const format = pdfExtractFormat?.value || 'png';
+        const rangeType = pdfExtractRangeType?.value || 'ALL';
+        const rangeInput = pdfExtractRangeInput?.value || '';
+        const resolutionMode = pdfResolutionMode?.value || 'WIDTH';
+        const width = parseInt(pdfWidthSlider?.value || '1200', 10);
+        const dpi = parseInt(pdfDpiSelect?.value || '150', 10);
+        const jpgQuality = Math.min(100, Math.max(40, parseInt(pdfJpgQualitySlider?.value || '92', 10))) / 100;
+        const shouldCreateZip = Boolean(pdfExtractZip?.checked);
+        const pdfStem = getPdfStem(selectedPdfFile.name);
+        const safePdfStem = sanitizeFileStem(pdfStem);
+        const outputFolderRoot = getPdfExtractFolder();
+
+        if (!outputFolderRoot) {
+            showToast('Choose an output folder first.', 'warning');
+            return;
+        }
+
+        pdfExtractBtn.disabled = true;
+        const originalLabel = pdfExtractBtn.innerHTML;
+        pdfExtractBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Extracting...';
+
+        let loadingTask = null;
+        let pdf = null;
+        try {
+            const pdfJs = window.pdfjsLib;
+            if (!pdfJs?.getDocument) {
+                throw new Error('PDF renderer is not available. Restart the app and try again.');
+            }
+
+            const pdfBytes = await getPdfDocumentBytes(selectedPdfFile);
+            loadingTask = pdfJs.getDocument({
+                data: pdfBytes,
+                disableFontFace: false,
+                useSystemFonts: true
+            });
+            pdf = await loadingTask.promise;
+            const totalPages = pdf.numPages;
+
+            const pagesToExtract = parsePdfPageSelection(rangeType, rangeInput, totalPages);
+
+            if (pagesToExtract.length === 0) {
+                showToast('No valid pages to extract.', 'warning');
+                return;
+            }
+
+            const shouldCreateSubfolder = pdfExtractSubfolder?.checked !== false && pagesToExtract.length > 1;
+            const outputFolder = shouldCreateSubfolder
+                ? joinOutputPath(outputFolderRoot, safePdfStem)
+                : outputFolderRoot;
+            let successCount = 0;
+            const savedImagePaths = [];
+            const imageMimeType = format === 'jpg' ? 'image/jpeg' : 'image/png';
+            const exportQuality = format === 'jpg' ? jpgQuality : undefined;
+
+            for (let index = 0; index < pagesToExtract.length; index++) {
+                const pageNum = pagesToExtract[index];
+                const page = await pdf.getPage(pageNum);
+                const viewport = page.getViewport({ scale: 1 });
+                const scale = getPdfRenderScale(resolutionMode, width, dpi, viewport);
+                const scaledViewport = page.getViewport({ scale });
+
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                const outputWidth = Math.max(1, Math.round(scaledViewport.width));
+                const outputHeight = Math.max(1, Math.round(scaledViewport.height));
+                canvas.width = outputWidth;
+                canvas.height = outputHeight;
+
+                if (format === 'jpg') {
+                    context.fillStyle = '#ffffff';
+                    context.fillRect(0, 0, outputWidth, outputHeight);
+                }
+
+                await page.render({
+                    canvasContext: context,
+                    viewport: scaledViewport,
+                    background: format === 'jpg' ? 'white' : undefined
+                }).promise;
+
+                const base64Data = canvas.toDataURL(imageMimeType, exportQuality);
+                const dataUrlParts = base64Data.split(',');
+                const base64String = dataUrlParts.length > 1 ? dataUrlParts[1] : base64Data;
+
+                const fileName = getExtractedPageFileName(
+                    pdfFileNaming?.value || 'stem_page_number',
+                    pdfStem,
+                    pageNum,
+                    totalPages,
+                    format
+                );
+                
+                const result = await window.app.saveExtractedPage({
+                    base64Data: base64String,
+                    outputFolder,
+                    fileName
+                });
+
+                if (result?.success) {
+                    successCount++;
+                    if (result.outputPath) {
+                        savedImagePaths.push(result.outputPath);
+                    }
+                }
+
+                page.cleanup?.();
+                pdfExtractBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Extracting ${index + 1}/${pagesToExtract.length}`;
+            }
+
+            if (successCount === 0) {
+                showToast('No pages were saved.', 'warning');
+                return;
+            }
+
+            if (shouldCreateZip && savedImagePaths.length > 0) {
+                const zipResult = await window.app.createExtractedImagesZip?.({
+                    filePaths: savedImagePaths,
+                    outputFolder,
+                    zipName: `${safePdfStem}_images`
+                });
+
+                if (zipResult?.success) {
+                    showToast(`ZIP created: ${zipResult.fileName}`, 'success');
+                } else {
+                    showToast(zipResult?.error || 'Images were saved, but ZIP creation failed.', 'warning', 6000);
+                }
+            }
+
+            showToast(`Successfully extracted ${successCount} page${successCount > 1 ? 's' : ''} as ${format.toUpperCase()}`, 'success');
+            addRecentFile(`${pdfStem} (${successCount} images)`, format, outputFolder);
+            if (appSettings.openFolderOnComplete) {
+                await window.app.openFolder(outputFolder);
+            }
+            clearPdfExtractFile();
+
+        } catch (error) {
+            console.error('[renderer] PDF extraction failed:', error);
+            showToast(`Extraction failed: ${error.message}`, 'error', 6000);
+        } finally {
+            if (pdf?.destroy) {
+                await pdf.destroy().catch(() => undefined);
+            } else if (loadingTask?.destroy) {
+                loadingTask.destroy();
+            }
+            pdfExtractBtn.innerHTML = originalLabel;
+            pdfExtractBtn.disabled = false;
+        }
     }
 
     function switchWorkspace(target) {
@@ -2040,6 +2307,7 @@
         }
         renderPdfImageList();
         clearPdfExtractFile();
+        setPdfMode('img-to-pdf');
         ensureGroupSettings('audio');
         syncSidebarFromScope();
         loadRecentFiles();
@@ -2389,9 +2657,22 @@
     pdfExtractRangeType?.addEventListener('change', () => {
         pdfExtractRangeGroup?.classList.toggle('hidden', pdfExtractRangeType.value !== 'CUSTOM');
     });
+    pdfResolutionMode?.addEventListener('change', () => {
+        const isDpiMode = pdfResolutionMode.value === 'DPI';
+        pdfDpiGroup?.classList.toggle('hidden', !isDpiMode);
+        pdfWidthSlider?.closest('.form-group')?.classList.toggle('hidden', isDpiMode);
+    });
+    pdfExtractFormat?.addEventListener('change', () => {
+        pdfJpgQualityGroup?.classList.toggle('hidden', pdfExtractFormat.value !== 'jpg');
+    });
     pdfWidthSlider?.addEventListener('input', () => {
         if (pdfWidthVal) {
             pdfWidthVal.textContent = `${pdfWidthSlider.value}px`;
+        }
+    });
+    pdfJpgQualitySlider?.addEventListener('input', () => {
+        if (pdfJpgQualityVal) {
+            pdfJpgQualityVal.textContent = `${pdfJpgQualitySlider.value}%`;
         }
     });
     pdfExtractPickFolderBtn?.addEventListener('click', async () => {

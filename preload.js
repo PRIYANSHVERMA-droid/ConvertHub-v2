@@ -65,6 +65,7 @@ contextBridge.exposeInMainWorld('app', {
     // PDF Toolkit
     createPDF: (data) => ipcRenderer.invoke('pdf:create', data),
     saveExtractedPage: (data) => ipcRenderer.invoke('pdf:save-page', data),
+    createExtractedImagesZip: (data) => ipcRenderer.invoke('pdf:create-images-zip', data),
     readFolderImages: (folderPath) => ipcRenderer.invoke('pdf:read-folder-images', { folderPath }),
 
 

@@ -308,37 +308,66 @@
                                         <span>.pdf</span>
                                     </div>
                                 </div>
-                                <div class="form-group">
-                                    <label>Page Size</label>
-                                    <select id="pdf-page-size" class="glass-input no-drag">
-                                        <option value="A4" selected>A4 (210 x 297mm)</option>
-                                        <option value="LETTER">Letter (8.5 x 11in)</option>
-                                        <option value="FIT">Fit to Image dimensions</option>
-                                    </select>
-                                </div>
-                                <div class="form-group" id="pdf-page-orientation-group">
-                                    <label>Orientation</label>
-                                    <select id="pdf-page-orientation" class="glass-input no-drag">
-                                        <option value="PORTRAIT" selected>Portrait</option>
-                                        <option value="LANDSCAPE">Landscape</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label>Margins</label>
-                                    <select id="pdf-page-margin" class="glass-input no-drag">
-                                        <option value="NONE" selected>None (Full bleed)</option>
-                                        <option value="SMALL">Small (15px)</option>
-                                        <option value="LARGE">Large (30px)</option>
-                                    </select>
-                                </div>
-                                <div class="form-group folder-group">
-                                    <label>Output Folder</label>
-                                    <div class="folder-input-wrapper">
-                                        <input type="text" id="pdf-output-folder-input" readonly class="glass-input" placeholder="Same as source">
-                                        <button class="icon-btn-small no-drag" id="pdf-pick-folder-btn" title="Browse folder"><i class="fa-regular fa-folder"></i></button>
-                                        <button class="icon-btn-small no-drag" id="pdf-open-folder-btn" title="Open folder"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
-                                    </div>
-                                </div>
+                                 <div class="form-group">
+                                     <label>Page Size</label>
+                                     <select id="pdf-page-size" class="glass-input no-drag">
+                                         <option value="A4" selected>A4 (210 x 297mm)</option>
+                                         <option value="LETTER">Letter (8.5 x 11in)</option>
+                                         <option value="FIT">Fit to Image dimensions</option>
+                                     </select>
+                                 </div>
+                                 <div class="form-group">
+                                     <label>Image Layout</label>
+                                     <select id="pdf-image-layout" class="glass-input no-drag">
+                                         <option value="CENTER" selected>Center on Page</option>
+                                         <option value="STRETCH">Stretch to Fill</option>
+                                     </select>
+                                 </div>
+                                 <div class="form-group" id="pdf-page-orientation-group">
+                                     <label>Orientation</label>
+                                     <select id="pdf-page-orientation" class="glass-input no-drag">
+                                         <option value="PORTRAIT" selected>Portrait</option>
+                                         <option value="LANDSCAPE">Landscape</option>
+                                     </select>
+                                 </div>
+                                 <div class="form-group">
+                                     <label>Margins</label>
+                                     <select id="pdf-page-margin" class="glass-input no-drag">
+                                         <option value="NONE" selected>None (Full bleed)</option>
+                                         <option value="SMALL">Small (15px)</option>
+                                         <option value="LARGE">Large (30px)</option>
+                                     </select>
+                                 </div>
+                                 <div class="form-group">
+                                     <label class="toggle-row" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                                         <input type="checkbox" id="pdf-page-numbers" style="width: 16px; height: 16px;">
+                                         <span>Add Page Numbers</span>
+                                     </label>
+                                 </div>
+                                 <div class="form-group folder-group">
+                                     <label>Output Folder</label>
+                                     <div class="folder-input-wrapper">
+                                         <input type="text" id="pdf-output-folder-input" readonly class="glass-input" placeholder="Same as source">
+                                         <button class="icon-btn-small no-drag" id="pdf-pick-folder-btn" title="Browse folder"><i class="fa-regular fa-folder"></i></button>
+                                         <button class="icon-btn-small no-drag" id="pdf-open-folder-btn" title="Open folder"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
+                                     </div>
+                                 </div>
+                                 <div class="form-group">
+                                     <label>PDF Metadata</label>
+                                     <div class="pdf-meta-inputs" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                         <input type="text" id="pdf-meta-title" class="glass-input no-drag" placeholder="Document Title">
+                                         <input type="text" id="pdf-meta-author" class="glass-input no-drag" placeholder="Author Name">
+                                     </div>
+                                 </div>
+                                 <div class="form-group">
+                                     <label>Password Protection</label>
+                                     <div class="pdf-password-field" style="display: flex; align-items: center; gap: 10px;">
+                                         <input type="password" id="pdf-password" class="glass-input no-drag" placeholder="Enter password to protect PDF">
+                                         <i class="fa-solid fa-lock" style="color: var(--text-muted); font-size: 14px;"></i>
+                                     </div>
+                                     <p class="settings-help">Leave empty to keep the PDF unprotected.</p>
+                                 </div>
+
                             </div>
                             <button class="pdf-advanced-toggle no-drag" type="button" id="pdf-advanced-toggle-btn">
                                 <span><strong>Advanced Options</strong><small>Page range, compression, and more</small></span>
@@ -359,7 +388,7 @@
                                 </div>
                             </div>
                             <div class="settings-footer-bar">
-                                <button id="pdf-compile-btn" class="primary-btn glow-btn no-drag" disabled>
+                                <button id="pdf-compile-btn" class="primary-btn glow-btn no-drag">
                                     <i class="fa-solid fa-file-pdf"></i> Compile into PDF <i class="fa-solid fa-arrow-right"></i>
                                 </button>
                             </div>
@@ -376,6 +405,13 @@
                                     <select id="pdf-extract-format" class="glass-input no-drag">
                                         <option value="png" selected>PNG (Lossless)</option>
                                         <option value="jpg">JPEG (Lossy)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Resolution Mode</label>
+                                    <select id="pdf-resolution-mode" class="glass-input no-drag">
+                                        <option value="WIDTH" selected>Custom Width</option>
+                                        <option value="DPI">Print DPI</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
@@ -398,6 +434,39 @@
                                         <span>1800px</span>
                                         <span>3000px</span>
                                     </div>
+                                </div>
+                                <div class="form-group hidden" id="pdf-dpi-group">
+                                    <label>DPI</label>
+                                    <select id="pdf-dpi-select" class="glass-input no-drag">
+                                        <option value="72">72 DPI</option>
+                                        <option value="150" selected>150 DPI</option>
+                                        <option value="300">300 DPI</option>
+                                        <option value="600">600 DPI</option>
+                                    </select>
+                                </div>
+                                <div class="form-group hidden" id="pdf-jpg-quality-group">
+                                    <label>JPEG Quality: <span id="pdf-jpg-quality-val">92%</span></label>
+                                    <input type="range" min="40" max="100" step="1" value="92" class="glass-slider no-drag" id="pdf-jpg-quality-slider">
+                                </div>
+                                <div class="form-group">
+                                    <label>File Naming</label>
+                                    <select id="pdf-file-naming" class="glass-input no-drag">
+                                        <option value="stem_page_number" selected>document_page_001</option>
+                                        <option value="stem-number">document-001</option>
+                                        <option value="page_number_stem">page_001_document</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="toggle-row" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                                        <input type="checkbox" id="pdf-extract-subfolder" checked style="width: 16px; height: 16px;">
+                                        <span>Create folder per PDF</span>
+                                    </label>
+                                </div>
+                                <div class="form-group">
+                                    <label class="toggle-row" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                                        <input type="checkbox" id="pdf-extract-zip" style="width: 16px; height: 16px;">
+                                        <span>Also create ZIP</span>
+                                    </label>
                                 </div>
                                 <div class="form-group folder-group">
                                     <label>Output Folder</label>
@@ -603,6 +672,15 @@
         </div>
     </div>
 
+    <script type="module">
+        import * as pdfjsLib from '../node_modules/pdfjs-dist/build/pdf.mjs';
+
+        pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+            '../node_modules/pdfjs-dist/build/pdf.worker.mjs',
+            import.meta.url
+        ).toString();
+        window.pdfjsLib = pdfjsLib;
+    </script>
     <script src="app.js"></script>
 </body>
 </html>

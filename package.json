@@ -43,6 +43,8 @@
     }
   },
   "dependencies": {
-    "pdf-lib": "^1.17.1"
+    "@pdfsmaller/pdf-encrypt": "^1.0.2",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^4.10.38"
   }
 }

@@ -3022,16 +3022,18 @@ select.glass-input {
 
 #pdf-workspace .pdf-sidebar-section {
     padding: 0;
+    overflow: hidden;
 }
 
 #pdf-workspace .pdf-sidebar-title {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 22px 22px 12px;
+    padding: 20px 22px 10px;
     cursor: pointer;
     user-select: none;
     transition: background-color 0.2s ease;
+    flex-shrink: 0;
 }
 
 #pdf-workspace .pdf-sidebar-title:hover {
@@ -3051,10 +3053,12 @@ select.glass-input {
 }
 
 #pdf-workspace .settings-form-scroll {
-    padding: 0 22px 22px;
-    overflow: visible;
+    padding: 0 22px 14px;
+    overflow-y: auto;
     transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1), padding 0.3s ease, opacity 0.2s ease;
     max-height: 1000px;
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 #pdf-workspace .settings-form-scroll.collapsed {
@@ -3067,18 +3071,18 @@ select.glass-input {
 }
 
 #pdf-workspace .form-group {
-    margin-bottom: 18px;
+    margin-bottom: 13px;
 }
 
 #pdf-workspace .form-group label {
     display: block;
-    margin-bottom: 9px;
+    margin-bottom: 7px;
     color: #aeb8cf;
-    font-size: 14px;
+    font-size: 13px;
 }
 
 #pdf-workspace .glass-input {
-    height: 50px;
+    height: 44px;
     border-radius: 8px;
     padding: 0 16px;
     color: #f8fafc;
@@ -3107,7 +3111,7 @@ select.glass-input {
 }
 
 #pdf-workspace .pdf-name-field span {
-    height: 50px;
+    height: 44px;
     display: grid;
     place-items: center;
     color: #dbe3f4;
@@ -3119,13 +3123,13 @@ select.glass-input {
 }
 
 #pdf-workspace .folder-input-wrapper {
-    grid-template-columns: minmax(0, 1fr) 50px 50px;
+    grid-template-columns: minmax(0, 1fr) 44px 44px;
     gap: 8px;
 }
 
 #pdf-workspace .icon-btn-small {
-    height: 50px;
-    width: 50px;
+    height: 44px;
+    width: 44px;
     border-radius: 8px;
     color: #f8fafc;
     background: rgba(7, 13, 29, 0.56);
@@ -3134,7 +3138,7 @@ select.glass-input {
 
 #pdf-workspace .pdf-advanced-toggle {
     width: 100%;
-    min-height: 76px;
+    min-height: 64px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -3143,8 +3147,11 @@ select.glass-input {
     border-top: 1px solid rgba(148, 163, 184, 0.13);
     border-bottom: 1px solid rgba(148, 163, 184, 0.13);
     color: #f8fafc;
-    background: rgba(255, 255, 255, 0.015);
+    background: rgba(13, 24, 47, 0.96);
     cursor: pointer;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
 }
 
 #pdf-workspace .pdf-advanced-toggle span {
@@ -3160,19 +3167,22 @@ select.glass-input {
 }
 
 #pdf-workspace .settings-footer-bar {
-    padding: 22px;
+    padding: 14px 22px 20px;
     border: 0;
-    background: transparent;
+    background: rgba(13, 24, 47, 0.96);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
 }
 
 #pdf-workspace #pdf-compile-btn,
 #pdf-workspace #pdf-extract-btn {
     width: 100%;
-    min-height: 64px;
+    min-height: 56px;
     border-radius: 10px;
     justify-content: center;
-    gap: 18px;
-    font-size: 20px;
+    gap: 14px;
+    font-size: 18px;
     font-weight: 800;
 }
 
@@ -3196,6 +3206,199 @@ select.glass-input {
     max-width: none;
     border-radius: 14px;
     background: rgba(17, 27, 52, 0.62);
+}
+
+[data-theme="light"] #pdf-workspace {
+    color: var(--text-main);
+}
+
+[data-theme="light"] #pdf-workspace .pdf-workspace-container {
+    background:
+        radial-gradient(circle at 12% 8%, rgba(124, 58, 237, 0.08), transparent 34%),
+        radial-gradient(circle at 78% 32%, rgba(37, 99, 235, 0.08), transparent 32%),
+        rgba(248, 250, 252, 0.85);
+}
+
+[data-theme="light"] #pdf-workspace .pdf-header-left p,
+[data-theme="light"] #pdf-workspace .upload-content p,
+[data-theme="light"] #pdf-workspace .form-group label,
+[data-theme="light"] #pdf-workspace .thumb-meta,
+[data-theme="light"] #pdf-workspace .pdf-drop-note,
+[data-theme="light"] #pdf-workspace .pdf-reorder-note {
+    color: var(--text-muted);
+}
+
+[data-theme="light"] #pdf-workspace .pdf-mode-tabs {
+    background: rgba(255, 255, 255, 0.82);
+    border-color: rgba(15, 23, 42, 0.12);
+}
+
+[data-theme="light"] #pdf-workspace .pdf-tab {
+    color: var(--text-main);
+}
+
+[data-theme="light"] #pdf-workspace .pdf-tab.active {
+    color: white;
+    background: var(--primary-btn);
+    box-shadow: 0 18px 38px rgba(93, 63, 232, 0.18);
+}
+
+[data-theme="light"] #pdf-workspace .pdf-upload-zone {
+    background:
+        radial-gradient(circle at 50% 48%, rgba(59, 130, 246, 0.12), transparent 40%),
+        rgba(255, 255, 255, 0.88);
+    border-color: rgba(15, 23, 42, 0.12);
+}
+
+[data-theme="light"] #pdf-workspace .pdf-upload-zone:hover,
+[data-theme="light"] #pdf-workspace .pdf-upload-zone.dragover {
+    border-color: rgba(59, 130, 246, 0.55);
+    background:
+        radial-gradient(circle at 50% 48%, rgba(59, 130, 246, 0.18), transparent 45%),
+        rgba(255, 255, 255, 0.96);
+}
+
+[data-theme="light"] #pdf-workspace .pdf-browse-btn,
+[data-theme="light"] #pdf-workspace .icon-btn-small {
+    color: var(--text-main);
+    background: rgba(255, 255, 255, 0.96);
+    border-color: rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] #pdf-workspace .pdf-browse-btn:hover,
+[data-theme="light"] #pdf-workspace .icon-btn-small:hover {
+    background: rgba(241, 245, 249, 0.98);
+}
+
+[data-theme="light"] #pdf-workspace .pdf-image-grid-section {
+    background: rgba(255, 255, 255, 0.92);
+    border-color: rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] #pdf-workspace .pdf-thumb-card {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: rgba(15, 23, 42, 0.08);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] #pdf-workspace .thumb-preview-wrap {
+    background: rgba(241, 245, 249, 0.85);
+}
+
+[data-theme="light"] #pdf-workspace .pdf-sidebar {
+    background: rgba(255, 255, 255, 0.92);
+    border-color: rgba(15, 23, 42, 0.08);
+    box-shadow: 0 22px 54px rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] #pdf-workspace .pdf-sidebar-title:hover {
+    background-color: rgba(15, 23, 42, 0.03);
+}
+
+[data-theme="light"] #pdf-workspace .settings-form-scroll {
+    background: transparent;
+}
+
+[data-theme="light"] #pdf-workspace .form-group label {
+    color: var(--text-muted);
+}
+
+[data-theme="light"] #pdf-workspace .glass-input {
+    background: rgba(255, 255, 255, 0.95);
+    color: var(--text-main);
+    border-color: rgba(15, 23, 42, 0.08);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+[data-theme="light"] #pdf-workspace .pdf-advanced-toggle {
+    color: var(--text-main);
+    background: rgba(255, 255, 255, 0.96);
+    border-color: rgba(148, 163, 184, 0.18);
+}
+
+[data-theme="light"] #pdf-workspace .pdf-advanced-toggle small {
+    color: var(--text-muted);
+}
+
+[data-theme="light"] #pdf-workspace .settings-footer-bar {
+    background: rgba(255, 255, 255, 0.9);
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] #pdf-workspace .pdf-file-card {
+    background: rgba(255, 255, 255, 0.92);
+    border-color: rgba(148, 163, 184, 0.18);
+}
+
+[data-theme="light"] #pdf-workspace .file-details-info h3,
+[data-theme="light"] #pdf-workspace .thumb-title {
+    color: var(--text-main);
+}
+
+[data-theme="light"] #pdf-workspace .thumb-meta {
+    color: var(--text-muted);
+}
+
+[data-theme="light"] #pdf-workspace .pdf-tab:hover {
+    color: var(--text-main);
+    background: rgba(15, 23, 42, 0.06);
+}
+
+[data-theme="light"] #pdf-workspace .upload-content h3 {
+    color: var(--text-main);
+}
+
+[data-theme="light"] #pdf-workspace .upload-content p {
+    color: var(--text-muted);
+}
+
+[data-theme="light"] #pdf-workspace .grid-header h4 {
+    color: var(--text-main);
+}
+
+[data-theme="light"] #pdf-workspace .clear-btn {
+    color: #b91c1c;
+}
+
+[data-theme="light"] #pdf-workspace .pdf-thumb-card:hover {
+    background: rgba(241, 245, 249, 0.96);
+    border-color: rgba(15, 23, 42, 0.12);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] #pdf-workspace .thumb-actions {
+    background: rgba(255, 255, 255, 0.92);
+}
+
+[data-theme="light"] #pdf-workspace .thumb-act-btn {
+    color: #0f172a;
+    background: rgba(255, 255, 255, 0.92);
+    border-color: rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] #pdf-workspace .thumb-act-btn:hover {
+    background: rgba(255, 255, 255, 1);
+}
+
+[data-theme="light"] #pdf-workspace .pdf-sidebar-title h4 i {
+    color: #4f46e5;
+}
+
+[data-theme="light"] #pdf-workspace .pdf-sidebar-title:hover {
+    background-color: rgba(15, 23, 42, 0.03);
+}
+
+[data-theme="light"] #pdf-workspace .pdf-sidebar-section {
+    background: transparent;
+}
+
+[data-theme="light"] #pdf-workspace .file-details-info p {
+    color: var(--text-muted);
+}
+
+[data-theme="light"] #pdf-workspace .pdf-file-card {
+    background: rgba(255, 255, 255, 0.96);
+    border-color: rgba(148, 163, 184, 0.18);
 }
 
 @media (max-width: 1100px) {
