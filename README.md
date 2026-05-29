@@ -29,6 +29,12 @@ It integrates powerful, local engines like **FFmpeg**, **LibreOffice**, and **7-
 
 ## 🖥 Preview
 
+### ⚡ Main Application UI
+
+| Dark Theme | Light Theme |
+| :---: | :---: |
+| ![Main UI Dark](https://raw.githubusercontent.com/PRIYANSHVERMA-droid/ConvertHub-v2/main/assets/screenshots/UI%20Dark.png) | ![Main UI Light](https://raw.githubusercontent.com/PRIYANSHVERMA-droid/ConvertHub-v2/main/assets/screenshots/UI%20light.png) |
+
 ### ⚡ Universal File Converter
 
 | Dark Theme | Light Theme |
