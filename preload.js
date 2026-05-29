@@ -101,6 +101,8 @@ contextBridge.exposeInMainWorld('app', {
     openFolder: (folderPath) => ipcRenderer.invoke('open-folder', folderPath),
     openPath: (targetPath) => ipcRenderer.invoke('open:path', targetPath),
     pathExists: (data) => ipcRenderer.invoke('path-exists', data),
+    deleteFile: (filePath) => ipcRenderer.invoke('delete-file', { filePath }),
+    getFileSize: (filePath) => ipcRenderer.invoke('get-file-size', { filePath }),
 
     // Window controls
     minimize: async () => {

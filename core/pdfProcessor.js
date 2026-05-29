@@ -140,6 +140,7 @@ async function compileImagesToPDF({ imagePaths, outputFolder, pdfName, pageSize 
     const pdfDoc = await PDFDocument.create();
     if (title) pdfDoc.setTitle(title);
     if (author) pdfDoc.setAuthor(author);
+    const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
     const marginValue = MARGINS[marginType.toUpperCase()] ?? 0;
     const isLandscape = orientation.toUpperCase() === 'LANDSCAPE';
@@ -256,11 +257,12 @@ async function compileImagesToPDF({ imagePaths, outputFolder, pdfName, pageSize 
             if (pageNumbers) {
                 const text = `Page ${pageIdx}`;
                 const fontSize = 10;
-                const textWidth = page.getFont('Helvetica').widthOfTextAtSize(text, fontSize);
+                const textWidth = helveticaFont.widthOfTextAtSize(text, fontSize);
                 page.drawText(text, {
                     x: (pageWidth - textWidth) / 2,
                     y: marginValue / 2 || 10,
                     size: fontSize,
+                    font: helveticaFont,
                     color: rgb(0, 0, 0),
                 });
             }

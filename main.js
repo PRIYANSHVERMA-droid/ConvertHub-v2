@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, protocol, net } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const { pathToFileURL } = require('url');
 const { initUpdater } = require('./core/updater');
 
@@ -197,15 +198,21 @@ app.whenReady().then(() => {
     createWindow();
 });
 
+app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') {
+        app.quit();
+    }
+});
+
 
 // Application version IPC
 ipcMain.handle('get-app-version', () => {
     return app.getVersion();
 });
 
-// Window controls IPC
-ipcMain.handle('window-minimize', (event) => {
-    console.log('[main] IPC window-minimize received');
+// Window controls IPC helpers
+const minimizeWindow = (event) => {
+    console.log('[main] IPC window minimize received');
     const targetWindow = getTargetWindow(event.sender);
     if (targetWindow && !targetWindow.isDestroyed()) {
         targetWindow.minimize();
@@ -214,22 +221,10 @@ ipcMain.handle('window-minimize', (event) => {
         console.warn('[main] No valid target window for minimize');
     }
     return true;
-});
+};
 
-ipcMain.handle('window:minimize', (event) => {
-    console.log('[main] IPC window:minimize received');
-    const targetWindow = getTargetWindow(event.sender);
-    if (targetWindow && !targetWindow.isDestroyed()) {
-        targetWindow.minimize();
-        console.log('[main] Window minimized');
-    } else {
-        console.warn('[main] No valid target window for minimize');
-    }
-    return true;
-});
-
-ipcMain.handle('window-maximize', (event) => {
-    console.log('[main] IPC window-maximize received');
+const maximizeWindow = (event) => {
+    console.log('[main] IPC window maximize received');
     const targetWindow = getTargetWindow(event.sender);
     if (targetWindow && !targetWindow.isDestroyed()) {
         if (targetWindow.isMaximized()) {
@@ -243,27 +238,10 @@ ipcMain.handle('window-maximize', (event) => {
         console.warn('[main] No valid target window for maximize');
     }
     return true;
-});
+};
 
-ipcMain.handle('window:maximize', (event) => {
-    console.log('[main] IPC window:maximize received');
-    const targetWindow = getTargetWindow(event.sender);
-    if (targetWindow && !targetWindow.isDestroyed()) {
-        if (targetWindow.isMaximized()) {
-            targetWindow.unmaximize();
-            console.log('[main] Window restored');
-        } else {
-            targetWindow.maximize();
-            console.log('[main] Window maximized');
-        }
-    } else {
-        console.warn('[main] No valid target window for maximize');
-    }
-    return true;
-});
-
-ipcMain.handle('window-close', (event) => {
-    console.log('[main] IPC window-close received');
+const closeWindow = (event) => {
+    console.log('[main] IPC window close received');
     const targetWindow = getTargetWindow(event.sender);
     if (targetWindow && !targetWindow.isDestroyed()) {
         targetWindow.close();
@@ -272,19 +250,14 @@ ipcMain.handle('window-close', (event) => {
         console.warn('[main] No valid target window for close');
     }
     return true;
-});
+};
 
-ipcMain.handle('window:close', (event) => {
-    console.log('[main] IPC window:close received');
-    const targetWindow = getTargetWindow(event.sender);
-    if (targetWindow && !targetWindow.isDestroyed()) {
-        targetWindow.close();
-        console.log('[main] Window close requested');
-    } else {
-        console.warn('[main] No valid target window for close');
-    }
-    return true;
-});
+ipcMain.handle('window-minimize', minimizeWindow);
+ipcMain.handle('window:minimize', minimizeWindow);
+ipcMain.handle('window-maximize', maximizeWindow);
+ipcMain.handle('window:maximize', maximizeWindow);
+ipcMain.handle('window-close', closeWindow);
+ipcMain.handle('window:close', closeWindow);
 
 ipcMain.handle('window:isMaximized', (event) => {
     const targetWindow = getTargetWindow(event.sender);
@@ -385,8 +358,8 @@ ipcMain.handle('convert-batch', async (_event, data) => {
     }
 });
 
-// ─── Output Folder Picker ───────────────────────────────────────
-ipcMain.handle('select-output-folder', async () => {
+// ─── Dialog and Shell IPC Helpers ───────────────────────────────
+const selectOutputFolderHandler = async () => {
     const result = await dialog.showOpenDialog(mainWindow, {
         title: 'Select Output Folder',
         properties: ['openDirectory']
@@ -395,32 +368,9 @@ ipcMain.handle('select-output-folder', async () => {
         return null;
     }
     return result.filePaths[0];
-});
+};
 
-ipcMain.handle('open:folder-dialog', async () => {
-    const result = await dialog.showOpenDialog(mainWindow, {
-        title: 'Select Output Folder',
-        properties: ['openDirectory']
-    });
-    if (result.canceled || result.filePaths.length === 0) {
-        return null;
-    }
-    return result.filePaths[0];
-});
-
-// ─── File Picker (alternative to drag/drop) ─────────────────────
-ipcMain.handle('select-files', async () => {
-    const result = await dialog.showOpenDialog(mainWindow, {
-        title: 'Select Files to Convert',
-        properties: ['openFile', 'multiSelections']
-    });
-    if (result.canceled || result.filePaths.length === 0) {
-        return [];
-    }
-    return result.filePaths;
-});
-
-ipcMain.handle('open:file-dialog', async () => {
+const selectFilesHandler = async () => {
     const result = await dialog.showOpenDialog(mainWindow, {
         title: 'Select Files',
         properties: ['openFile', 'multiSelections']
@@ -429,24 +379,46 @@ ipcMain.handle('open:file-dialog', async () => {
         return [];
     }
     return result.filePaths;
-});
+};
 
-// ─── Open folder in system explorer ─────────────────────────────
-ipcMain.handle('open-folder', async (_event, folderPath) => {
-    try {
-        await shell.openPath(folderPath);
-        return true;
-    } catch {
-        return false;
-    }
-});
-
-ipcMain.handle('open:path', async (_event, targetPath) => {
+const openPathHandler = async (_event, targetPath) => {
     try {
         await shell.openPath(targetPath);
         return true;
     } catch {
         return false;
+    }
+};
+
+ipcMain.handle('select-output-folder', selectOutputFolderHandler);
+ipcMain.handle('open:folder-dialog', selectOutputFolderHandler);
+ipcMain.handle('select-files', selectFilesHandler);
+ipcMain.handle('open:file-dialog', selectFilesHandler);
+ipcMain.handle('open-folder', openPathHandler);
+ipcMain.handle('open:path', openPathHandler);
+
+// ─── Utility IPC Handlers ───────────────────────────────────────
+ipcMain.handle('delete-file', async (_event, { filePath }) => {
+    try {
+        if (fs.existsSync(filePath)) {
+            await fs.promises.unlink(filePath);
+            console.log(`[main] Deleted temporary file: ${filePath}`);
+            return { success: true };
+        }
+        return { success: false, error: 'File does not exist' };
+    } catch (err) {
+        console.error('[main] Error in delete-file:', err);
+        return { success: false, error: err.message };
+    }
+});
+
+ipcMain.handle('get-file-size', async (_event, { filePath }) => {
+    try {
+        const stats = await fs.promises.stat(filePath);
+        return stats.size;
+    } catch (err) {
+        console.error('[main] Error in get-file-size:', err);
+        return 0;
     }
 });
 
@@ -454,8 +426,6 @@ ipcMain.handle('open:path', async (_event, targetPath) => {
 ipcMain.handle('get-default-output', () => {
     return app.getPath('downloads');
 });
-
-const fs = require('fs');
 
 let pdfProcessor = null;
 function getPDFProcessor() {

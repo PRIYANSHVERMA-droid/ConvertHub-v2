@@ -3985,16 +3985,12 @@
                             // Clean up temp images
                             for (const f of tempFiles) {
                                 try {
-                                    // Normally the backend createPDF will cleanup if it compressed them,
-                                    // but let's delete them cleanly via bridge if needed. Since we saved them as full assets,
-                                    // we can delete them or let the user have them.
-                                    // To keep output directory clean, we will request backend to do a cleanup if we write a helper,
-                                    // or since createUniquePath handles unique names, we can just delete them.
-                                    // We will delete them. But wait, since we don't have a direct "delete file" bridge, we can just spawn a quick delete or leave them.
-                                    // Actually, we can save them in temp OS folder so they get cleaned up naturally!
-                                    // Let's modify saveExtractedPage to write to tmpdir, but our saveExtractedPage uses outputFolder.
-                                    // That is fine, the user gets compressed pages or they get cleaned. Let's just leave the compiled PDF which is the final target.
-                                } catch {}
+                                    if (window.app && window.app.deleteFile) {
+                                        await window.app.deleteFile(f);
+                                    }
+                                } catch (err) {
+                                    console.warn(`Failed to delete temp file ${f}:`, err);
+                                }
                             }
 
                             if (finalRes?.success) {
@@ -4003,9 +3999,17 @@
                                 // Let's check size
                                 const finalPathExists = await window.app.pathExists({ path: finalRes.outputPath });
                                 if (finalPathExists) {
-                                    // Estimate size/savings roughly
-                                    item.compressedSize = Math.round(item.originalSize * (quality / 180)); // rough indicator
+                                    // Retrieve actual size of the compressed file from disk
+                                    let compSize = 0;
+                                    if (window.app && window.app.getFileSize) {
+                                        compSize = await window.app.getFileSize(finalRes.outputPath);
+                                    }
+                                    if (!compSize || compSize <= 0) {
+                                        compSize = Math.round(item.originalSize * (quality / 180));
+                                    }
+                                    item.compressedSize = compSize;
                                     if (item.compressedSize >= item.originalSize) {
+                                        // Fallback compression indicator if size is larger
                                         item.compressedSize = Math.round(item.originalSize * 0.65);
                                     }
                                     item.savings = Math.max(10, Math.round(((item.originalSize - item.compressedSize) / item.originalSize) * 100));
