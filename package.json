@@ -40,10 +40,18 @@
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "PRIYANSHVERMA-droid",
+        "repo": "ConvertHub-v2"
+      }
+    ]
   },
   "dependencies": {
     "@pdfsmaller/pdf-encrypt": "^1.0.2",
+    "electron-updater": "^6.8.3",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^4.10.38"
   }

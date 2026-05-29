@@ -68,6 +68,9 @@ contextBridge.exposeInMainWorld('app', {
     createExtractedImagesZip: (data) => ipcRenderer.invoke('pdf:create-images-zip', data),
     mergePDFs: (data) => ipcRenderer.invoke('pdf:merge', data),
     readFolderImages: (folderPath) => ipcRenderer.invoke('pdf:read-folder-images', { folderPath }),
+    watermarkPDF: (data) => ipcRenderer.invoke('pdf:watermark', data),
+    compressPDFLossless: (data) => ipcRenderer.invoke('pdf:compress-lossless', data),
+    organizePDF: (data) => ipcRenderer.invoke('pdf:organize', data),
 
 
     // Progress listener
@@ -122,6 +125,19 @@ contextBridge.exposeInMainWorld('app', {
     setTitlebarTheme: (theme) => ipcRenderer.invoke('set-titlebar-theme', theme),
     onWindowStateChanged: (callback) => {
         ipcRenderer.on('window-state-changed', (_event, data) => callback(data));
+    },
+
+    // Updater
+    getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+    checkForUpdates: () => ipcRenderer.invoke('updater:check'),
+    downloadUpdate: () => ipcRenderer.invoke('updater:download'),
+    restartAndInstallUpdate: () => ipcRenderer.invoke('updater:restart-install'),
+    setUpdaterConfig: (config) => ipcRenderer.invoke('updater:set-config', config),
+    onUpdateStatus: (callback) => {
+        ipcRenderer.on('updater:status', (_event, data) => callback(data));
+    },
+    removeUpdateStatusListeners: () => {
+        ipcRenderer.removeAllListeners('updater:status');
     }
 });
 

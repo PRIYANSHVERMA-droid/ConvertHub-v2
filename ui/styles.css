@@ -217,6 +217,68 @@ body {
     position: relative;
 }
 
+/* Startup Splash */
+#app-splash {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg, rgba(15,17,26,0.96), rgba(15,17,26,0.88));
+    z-index: 9999;
+    transition: opacity 420ms cubic-bezier(0.2,0.8,0.2,1), transform 420ms ease;
+}
+
+#app-splash .splash-inner {
+    text-align: center;
+    color: var(--text-main);
+    transform-origin: center;
+    transition: transform 420ms ease, opacity 420ms ease;
+}
+
+#app-splash .splash-logo {
+    font-size: 48px;
+    margin-bottom: 10px;
+    background: var(--logo-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+#app-splash .splash-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    color: var(--text-main);
+    opacity: 0.95;
+}
+
+.splash-spinner {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 4px solid rgba(255,255,255,0.08);
+    border-top-color: rgba(255,255,255,0.95);
+    animation: splash-spin 900ms linear infinite;
+    margin: 0 auto;
+}
+
+@keyframes splash-spin { to { transform: rotate(360deg); } }
+
+#app-splash.splash-hide {
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.995);
+}
+
+#app-splash.splash-hide .splash-inner {
+    transform: translateY(-12px) scale(0.98);
+    opacity: 0;
+}
+
+#app-splash.splash-remove { display: none !important; }
+
 body.settings-open {
     overflow: hidden;
 }
@@ -2728,7 +2790,7 @@ select.glass-input {
 }
 
 #pdf-workspace .pdf-mode-tabs {
-    width: min(540px, 100%);
+    width: min(1080px, 100%);
     height: 50px;
     padding: 0;
     gap: 0;
@@ -3497,6 +3559,12 @@ select.glass-input {
     #pdf-workspace .pdf-sidebar {
         min-height: 560px;
     }
+
+    #pdf-workspace .pdf-tab {
+        font-size: 12px;
+        padding: 4px 8px;
+        gap: 6px;
+    }
 }
 
 @media (max-width: 700px) {
@@ -3522,4 +3590,420 @@ select.glass-input {
         width: 64px;
         height: 44px;
     }
+}
+
+/* ─── Application Updates Card ──────────────────────────────── */
+.updater-card {
+    background:
+        radial-gradient(circle at top right, rgba(139, 92, 246, 0.1), transparent 30%),
+        rgba(255, 255, 255, 0.04);
+}
+
+.updater-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.updater-status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+}
+
+.updater-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.updater-info strong {
+    font-size: 16px;
+    margin-top: 4px;
+    color: var(--text-main);
+}
+
+.updater-actions-inline {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.updater-btn {
+    width: auto !important;
+    padding: 10px 18px !important;
+    font-size: 13px !important;
+    height: auto !important;
+    flex-shrink: 0;
+}
+
+.updater-progress-container {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+    padding: 16px;
+}
+
+.updater-progress-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.updater-progress-bar {
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.updater-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #8b5cf6 0%, #3b82f6 100%);
+    border-radius: 4px;
+    width: 0%;
+    transition: width 0.1s linear;
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+}
+
+.updater-toggles {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 10px;
+}
+
+.updater-status-success {
+    color: #10b981 !important;
+}
+
+.updater-status-warning {
+    color: #f59e0b !important;
+}
+
+.updater-status-info {
+    color: #3b82f6 !important;
+}
+
+[data-theme="light"] .updater-status-row,
+[data-theme="light"] .updater-progress-container {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+
+/* ==========================================
+   ConvertHub PDF Toolkit Additions Styles
+   ========================================== */
+
+/* ─── Live Watermark Preview ────────────────────────────────── */
+.watermark-preview-container {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    background: #ffffff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    transition: box-shadow 0.3s ease;
+}
+
+[data-theme="light"] .watermark-preview-container {
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+#watermark-preview-canvas {
+    max-width: 100%;
+    max-height: 400px;
+    display: block;
+}
+
+/* ─── Page Organizer Thumbnails Grid ──────────────────────── */
+.pdf-organize-card {
+    position: relative;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: grab;
+    user-select: none;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pdf-organize-card:active {
+    cursor: grabbing;
+}
+
+[data-theme="light"] .pdf-organize-card {
+    background: rgba(0, 0, 0, 0.02);
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+.pdf-organize-card:hover {
+    transform: translateY(-4px);
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="light"] .pdf-organize-card:hover {
+    background: rgba(255, 255, 255, 0.8);
+    border-color: rgba(0, 0, 0, 0.15);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+/* Page Thumb container to support clean rotation bounds */
+.pdf-organize-thumb-wrap {
+    width: 120px;
+    height: 160px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    background: #ffffff;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    position: relative;
+}
+
+.pdf-organize-thumb-wrap canvas {
+    max-width: 100%;
+    max-height: 100%;
+    display: block;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pdf-organize-meta {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-main);
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    align-items: center;
+    padding: 0 2px;
+}
+
+.pdf-organize-rotation-badge {
+    font-size: 10px;
+    background: rgba(139, 92, 246, 0.2);
+    color: #a78bfa;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-weight: 700;
+}
+
+[data-theme="light"] .pdf-organize-rotation-badge {
+    background: rgba(139, 92, 246, 0.1);
+    color: #6d28d9;
+}
+
+/* Card Hover overlay with quick actions */
+.pdf-organize-actions-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 17, 26, 0.85);
+    border-radius: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 5;
+}
+
+.pdf-organize-card:hover .pdf-organize-actions-overlay {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.pdf-organize-action-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.pdf-organize-action-btn:hover {
+    transform: scale(1.15);
+    background: var(--primary-btn);
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+}
+
+.pdf-organize-action-btn.btn-delete:hover {
+    background: #ef4444;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+}
+
+/* Deletion visual state overlay */
+.pdf-organize-card.deleted {
+    opacity: 0.45;
+    border-color: rgba(239, 68, 68, 0.4);
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.pdf-organize-card.deleted:hover {
+    opacity: 0.9;
+    transform: none;
+    box-shadow: none;
+}
+
+.pdf-organize-card.deleted .pdf-organize-thumb-wrap {
+    filter: grayscale(1) blur(1px);
+}
+
+.pdf-organize-deleted-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(239, 68, 68, 0.2);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    z-index: 6;
+}
+
+.pdf-organize-deleted-overlay span {
+    font-size: 12px;
+    font-weight: 700;
+    color: #f87171;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.pdf-organize-card.deleted .pdf-organize-actions-overlay {
+    display: none !important;
+}
+
+/* Drag over states for drag and drop reordering */
+.pdf-organize-card.drag-over {
+    border: 2px dashed #8b5cf6;
+    background: rgba(139, 92, 246, 0.08);
+}
+
+/* ─── Batch Compression Status Table ───────────────────────── */
+.pdf-compress-item-row {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    transition: all 0.25s ease;
+}
+
+[data-theme="light"] .pdf-compress-item-row {
+    background: rgba(255, 255, 255, 0.55);
+    border-color: rgba(0, 0, 0, 0.06);
+}
+
+.pdf-compress-item-row:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+[data-theme="light"] .pdf-compress-item-row:hover {
+    background: rgba(255, 255, 255, 0.85);
+}
+
+.compress-item-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex: 1;
+    min-width: 0;
+}
+
+.compress-item-icon {
+    font-size: 24px;
+    color: var(--accent-document);
+}
+
+.compress-item-meta {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.compress-item-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.compress-item-size-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 3px;
+}
+
+.compress-item-status-col {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.compress-savings-pill {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    box-shadow: 0 4px 10px rgba(16, 185, 129, 0.25);
+}
+
+.compress-status-text {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.compress-status-text.complete {
+    color: #10b981;
+}
+
+.compress-status-text.failed {
+    color: #ef4444;
+}
+
+.pdf-compress-item-row .icon-btn {
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }

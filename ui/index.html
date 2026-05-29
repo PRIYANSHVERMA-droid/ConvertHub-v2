@@ -8,6 +8,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
 </head>
 <body data-theme="dark">
+    <!-- Startup Splash -->
+    <div id="app-splash" aria-hidden="true">
+        <div class="splash-inner">
+            <div class="splash-logo"><i class="fa-solid fa-bolt"></i></div>
+            <div class="splash-title">ConvertHub v2</div>
+            <div class="splash-spinner" role="status" aria-label="Loading"></div>
+        </div>
+    </div>
     <!-- Animated Background Blobs -->
     <div class="background-container">
         <div class="glow-blob blob-1"></div>
@@ -245,6 +253,9 @@
                         <button class="pdf-tab active" data-mode="img-to-pdf" id="pdf-tab-img-to-pdf"><i class="fa-regular fa-image"></i> Images to PDF</button>
                         <button class="pdf-tab" data-mode="pdf-to-img" id="pdf-tab-pdf-to-img"><i class="fa-regular fa-image"></i> PDF to Images</button>
                         <button class="pdf-tab" data-mode="merge-pdf" id="pdf-tab-merge-pdf"><i class="fa-solid fa-layer-group"></i> Merge PDFs</button>
+                        <button class="pdf-tab" data-mode="watermark-pdf" id="pdf-tab-watermark-pdf"><i class="fa-solid fa-signature"></i> Watermark</button>
+                        <button class="pdf-tab" data-mode="compress-pdf" id="pdf-tab-compress-pdf"><i class="fa-solid fa-compress"></i> Compress PDF</button>
+                        <button class="pdf-tab" data-mode="organize-pdf" id="pdf-tab-organize-pdf"><i class="fa-solid fa-arrows-spin"></i> Organize Pages</button>
                     </div>
                 </div>
                 
@@ -322,6 +333,94 @@
                                 </div>
                                 <div class="pdf-merged-pages-list" id="pdf-merged-pages-list"></div>
                                 <p class="pdf-reorder-note"><i class="fa-solid fa-circle-info"></i> Drag pages here to build the final order. Reorder pages by dragging.</p>
+                            </div>
+                        </div>
+
+                        <!-- Watermark PDF Panel -->
+                        <div id="panel-watermark-pdf" class="pdf-panel hidden">
+                            <div class="pdf-upload-zone no-drag" id="pdf-watermark-dropzone">
+                                <input type="file" id="pdf-watermark-input" accept=".pdf" style="display: none;">
+                                <div class="upload-content">
+                                    <div class="pdf-drop-icon pdf-drop-icon-file"><i class="fa-solid fa-signature"></i></div>
+                                    <h3>Drop PDF here</h3>
+                                    <p>Select a PDF to add text or image watermarks.</p>
+                                    <button class="pdf-browse-btn no-drag" type="button"><i class="fa-regular fa-folder"></i> Browse Files</button>
+                                </div>
+                            </div>
+
+                            <div class="pdf-file-details hidden" id="pdf-watermark-details">
+                                <div class="pdf-file-card">
+                                    <i class="fa-solid fa-file-pdf file-large-icon"></i>
+                                    <div class="file-details-info">
+                                        <h3 id="pdf-watermark-detail-name">document.pdf</h3>
+                                        <p id="pdf-watermark-detail-meta">0.0 MB &bull; 0 pages</p>
+                                    </div>
+                                    <button class="icon-btn no-drag pdf-remove-file-btn" id="pdf-watermark-remove-file-btn" title="Remove PDF"><i class="fa-solid fa-xmark"></i></button>
+                                </div>
+                            </div>
+
+                            <div class="pdf-watermark-preview-section hidden" id="pdf-watermark-preview-section" style="margin-top: 25px; display: flex; flex-direction: column; align-items: center; gap: 12px; background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 12px; padding: 20px;">
+                                <h4 style="align-self: flex-start; color: var(--text-main); margin: 0 0 10px 0;"><i class="fa-regular fa-eye"></i> Live Watermark Preview (Page 1)</h4>
+                                <div class="watermark-preview-container" style="position: relative; border-radius: 8px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.4); max-width: 100%; max-height: 400px; background: #fff; display: flex; justify-content: center; align-items: center;">
+                                    <canvas id="watermark-preview-canvas" style="display: block; max-width: 100%; max-height: 400px;"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Compress PDF Panel -->
+                        <div id="panel-compress-pdf" class="pdf-panel hidden">
+                            <div class="pdf-upload-zone no-drag" id="pdf-compress-dropzone">
+                                <input type="file" id="pdf-compress-input" multiple accept=".pdf" style="display: none;">
+                                <div class="upload-content">
+                                    <div class="pdf-drop-icon pdf-drop-icon-file"><i class="fa-solid fa-compress"></i></div>
+                                    <h3>Drop PDFs here</h3>
+                                    <p>Select one or more PDFs to optimize and shrink.</p>
+                                    <button class="pdf-browse-btn no-drag" type="button"><i class="fa-regular fa-folder"></i> Browse Files</button>
+                                </div>
+                            </div>
+
+                            <div class="pdf-image-grid-section hidden" id="pdf-compress-list-section">
+                                <div class="grid-header">
+                                    <h4>PDFs to Compress (<span id="pdf-compress-count">0</span>)</h4>
+                                    <button class="clear-btn no-drag" id="pdf-compress-clear-btn"><i class="fa-regular fa-trash-can"></i> Clear All</button>
+                                </div>
+                                <div class="pdf-uploaded-list" id="pdf-compress-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Page Organizer Panel -->
+                        <div id="panel-organize-pdf" class="pdf-panel hidden">
+                            <div class="pdf-upload-zone no-drag" id="pdf-organize-dropzone">
+                                <input type="file" id="pdf-organize-input" accept=".pdf" style="display: none;">
+                                <div class="upload-content">
+                                    <div class="pdf-drop-icon pdf-drop-icon-file"><i class="fa-solid fa-arrows-spin"></i></div>
+                                    <h3>Drop PDF here</h3>
+                                    <p>Select a PDF to rotate, delete, or rearrange pages.</p>
+                                    <button class="pdf-browse-btn no-drag" type="button"><i class="fa-regular fa-folder"></i> Browse Files</button>
+                                </div>
+                            </div>
+
+                            <div class="pdf-file-details hidden" id="pdf-organize-details" style="margin-bottom: 20px;">
+                                <div class="pdf-file-card">
+                                    <i class="fa-solid fa-file-pdf file-large-icon"></i>
+                                    <div class="file-details-info">
+                                        <h3 id="pdf-organize-detail-name">document.pdf</h3>
+                                        <p id="pdf-organize-detail-meta">0.0 MB &bull; 0 pages</p>
+                                    </div>
+                                    <button class="icon-btn no-drag pdf-remove-file-btn" id="pdf-organize-remove-file-btn" title="Remove PDF"><i class="fa-solid fa-xmark"></i></button>
+                                </div>
+                            </div>
+
+                            <div class="pdf-image-grid-section hidden" id="pdf-organize-pages-section">
+                                <div class="grid-header">
+                                    <h4>PDF Pages (<span id="pdf-organize-page-count">0</span>)</h4>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button class="outline-btn no-drag" id="pdf-organize-select-all" style="padding: 4px 8px; font-size: 11px;"><i class="fa-solid fa-check-double"></i> Select All</button>
+                                        <button class="outline-btn no-drag" id="pdf-organize-rotate-all" style="padding: 4px 8px; font-size: 11px;"><i class="fa-solid fa-rotate-right"></i> Rotate All 90°</button>
+                                    </div>
+                                </div>
+                                <div class="pdf-uploaded-list" id="pdf-organize-pages-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; padding: 15px 0;"></div>
+                                <p class="pdf-reorder-note"><i class="fa-solid fa-circle-info"></i> Drag pages to reorder them. Hover on pages to rotate or delete them.</p>
                             </div>
                         </div>
                     </main>
@@ -544,6 +643,184 @@
                                 </button>
                             </div>
                         </section>
+
+                        <!-- Watermark PDF Sidebar Section -->
+                        <section class="pdf-sidebar-section hidden" id="sidebar-watermark-pdf">
+                            <div class="pdf-sidebar-title">
+                                <h4><i class="fa-solid fa-sliders"></i> Watermark Settings</h4>
+                                <i class="fa-solid fa-chevron-up"></i>
+                            </div>
+                            <div class="settings-form-scroll">
+                                <div class="form-group">
+                                    <label>Output Filename</label>
+                                    <div class="pdf-name-field">
+                                        <input type="text" id="pdf-watermark-output-name" class="glass-input no-drag" value="Watermarked_PDF" placeholder="e.g. watermarked">
+                                        <span>.pdf</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Watermark Type</label>
+                                    <select id="pdf-watermark-type" class="glass-input no-drag">
+                                        <option value="text" selected>Text Watermark</option>
+                                        <option value="image">Logo / Image Watermark</option>
+                                    </select>
+                                </div>
+
+                                <!-- Text Watermark Group -->
+                                <div id="pdf-watermark-text-group">
+                                    <div class="form-group">
+                                        <label>Watermark Text</label>
+                                        <input type="text" id="pdf-watermark-text-input" class="glass-input no-drag" value="CONFIDENTIAL" placeholder="CONFIDENTIAL">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Font Family</label>
+                                        <select id="pdf-watermark-font" class="glass-input no-drag">
+                                            <option value="Helvetica" selected>Helvetica Bold</option>
+                                            <option value="Courier">Courier Bold</option>
+                                            <option value="Times-Roman">Times Roman Bold</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Font Size: <span id="pdf-watermark-size-val">48px</span></label>
+                                        <input type="range" min="12" max="120" value="48" class="glass-slider no-drag" id="pdf-watermark-size-slider">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Color</label>
+                                        <div style="display: flex; gap: 10px; align-items: center;">
+                                            <input type="color" id="pdf-watermark-color" class="no-drag" value="#ff0000" style="border: 0; background: transparent; width: 40px; height: 35px; border-radius: 6px; cursor: pointer;">
+                                            <input type="text" id="pdf-watermark-color-hex" class="glass-input no-drag" value="#ff0000" style="flex: 1;" readonly>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Rotation: <span id="pdf-watermark-rotation-val">-45&deg;</span></label>
+                                        <input type="range" min="-90" max="90" value="-45" class="glass-slider no-drag" id="pdf-watermark-rotation-slider">
+                                    </div>
+                                </div>
+
+                                <!-- Image Watermark Group (Hidden by default) -->
+                                <div id="pdf-watermark-image-group" class="hidden">
+                                    <div class="form-group">
+                                        <label>Logo Image File</label>
+                                        <div style="display: flex; gap: 8px;">
+                                            <input type="text" id="pdf-watermark-logo-path" class="glass-input" readonly placeholder="No file selected">
+                                            <button class="outline-btn no-drag" id="pdf-watermark-logo-browse-btn" style="padding: 0 10px;"><i class="fa-regular fa-folder-open"></i></button>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Logo Scale: <span id="pdf-watermark-logo-scale-val">30%</span></label>
+                                        <input type="range" min="10" max="100" value="30" class="glass-slider no-drag" id="pdf-watermark-logo-scale-slider">
+                                    </div>
+                                </div>
+
+                                <!-- Common Watermark Group -->
+                                <div class="form-group">
+                                    <label>Opacity: <span id="pdf-watermark-opacity-val">30%</span></label>
+                                    <input type="range" min="10" max="100" value="30" class="glass-slider no-drag" id="pdf-watermark-opacity-slider">
+                                </div>
+                                <div class="form-group">
+                                    <label>Placement</label>
+                                    <select id="pdf-watermark-placement" class="glass-input no-drag">
+                                        <option value="CENTER" selected>Single Center</option>
+                                        <option value="TILED">Tiled Overlay (Grid)</option>
+                                        <option value="TOP_LEFT">Top-Left</option>
+                                        <option value="TOP_RIGHT">Top-Right</option>
+                                        <option value="BOTTOM_LEFT">Bottom-Left</option>
+                                        <option value="BOTTOM_RIGHT">Bottom-Right</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Target Pages</label>
+                                    <select id="pdf-watermark-pages-select" class="glass-input no-drag">
+                                        <option value="ALL" selected>All Pages</option>
+                                        <option value="FIRST">First Page Only</option>
+                                        <option value="LAST">Last Page Only</option>
+                                        <option value="CUSTOM">Specific Page Range</option>
+                                    </select>
+                                </div>
+                                <div class="form-group hidden" id="pdf-watermark-pages-range-group">
+                                    <label>Page Range</label>
+                                    <input type="text" id="pdf-watermark-pages-range-input" class="glass-input no-drag" placeholder="e.g. 1,3-5">
+                                </div>
+                                <div class="form-group folder-group">
+                                    <label>Output Folder</label>
+                                    <div class="folder-input-wrapper">
+                                        <input type="text" id="pdf-watermark-folder-input" readonly class="glass-input" placeholder="Same as source">
+                                        <button class="icon-btn-small no-drag" id="pdf-watermark-pick-folder-btn" title="Browse folder"><i class="fa-regular fa-folder"></i></button>
+                                        <button class="icon-btn-small no-drag" id="pdf-watermark-open-folder-btn" title="Open folder"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="settings-footer-bar">
+                                <button id="pdf-watermark-btn" class="primary-btn glow-btn no-drag" disabled>
+                                    <i class="fa-solid fa-signature"></i> Apply Watermark <i class="fa-solid fa-arrow-right"></i>
+                                </button>
+                            </div>
+                        </section>
+
+                        <!-- Compress PDF Sidebar Section -->
+                        <section class="pdf-sidebar-section hidden" id="sidebar-compress-pdf">
+                            <div class="pdf-sidebar-title">
+                                <h4><i class="fa-solid fa-sliders"></i> Compression Settings</h4>
+                                <i class="fa-solid fa-chevron-up"></i>
+                            </div>
+                            <div class="settings-form-scroll">
+                                <div class="form-group">
+                                    <label>Compression Profile</label>
+                                    <select id="pdf-compress-profile" class="glass-input no-drag">
+                                        <option value="recommended" selected>Recommended Compression</option>
+                                        <option value="extreme">Extreme Compression</option>
+                                        <option value="high">High Quality</option>
+                                        <option value="lossless">Lossless Optimization</option>
+                                    </select>
+                                    <p class="settings-help" id="pdf-compress-profile-desc" style="margin-top: 8px; color: var(--accent-document); font-size: 11px; font-weight: 600; line-height: 1.4;">
+                                        Balanced optimization downscaling image layers to 150 DPI at 75% quality. Keeps text editable.
+                                    </p>
+                                </div>
+                                <div class="form-group folder-group">
+                                    <label>Output Folder</label>
+                                    <div class="folder-input-wrapper">
+                                        <input type="text" id="pdf-compress-folder-input" readonly class="glass-input" placeholder="Same as source">
+                                        <button class="icon-btn-small no-drag" id="pdf-compress-pick-folder-btn" title="Browse folder"><i class="fa-regular fa-folder"></i></button>
+                                        <button class="icon-btn-small no-drag" id="pdf-compress-open-folder-btn" title="Open folder"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="settings-footer-bar">
+                                <button id="pdf-compress-btn" class="primary-btn glow-btn no-drag" disabled>
+                                    <i class="fa-solid fa-compress"></i> Compress PDFs <i class="fa-solid fa-arrow-right"></i>
+                                </button>
+                            </div>
+                        </section>
+
+                        <!-- Organize PDF Sidebar Section -->
+                        <section class="pdf-sidebar-section hidden" id="sidebar-organize-pdf">
+                            <div class="pdf-sidebar-title">
+                                <h4><i class="fa-solid fa-sliders"></i> Organize Settings</h4>
+                                <i class="fa-solid fa-chevron-up"></i>
+                            </div>
+                            <div class="settings-form-scroll">
+                                <div class="form-group">
+                                    <label>Output Filename</label>
+                                    <div class="pdf-name-field">
+                                        <input type="text" id="pdf-organize-output-name" class="glass-input no-drag" value="Organized_PDF" placeholder="e.g. document_final">
+                                        <span>.pdf</span>
+                                    </div>
+                                </div>
+                                <div class="form-group folder-group">
+                                    <label>Output Folder</label>
+                                    <div class="folder-input-wrapper">
+                                        <input type="text" id="pdf-organize-folder-input" readonly class="glass-input" placeholder="Same as source">
+                                        <button class="icon-btn-small no-drag" id="pdf-organize-pick-folder-btn" title="Browse folder"><i class="fa-regular fa-folder"></i></button>
+                                        <button class="icon-btn-small no-drag" id="pdf-organize-open-folder-btn" title="Open folder"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="settings-footer-bar">
+                                <button id="pdf-organize-btn" class="primary-btn glow-btn no-drag" disabled>
+                                    <i class="fa-solid fa-arrows-spin"></i> Save Organized PDF <i class="fa-solid fa-arrow-right"></i>
+                                </button>
+                            </div>
+                        </section>
                     </aside>
                 </div>
             </div>
@@ -579,6 +856,16 @@
                             </div>
                             <input id="settings-show-toasts" type="checkbox" checked>
                         </label>
+                        <div class="settings-field" style="margin-top:12px;">
+                            <label for="settings-startup-workspace">Default startup workspace</label>
+                            <select id="settings-startup-workspace" class="glass-input no-drag">
+                                <option value="last">Last active workspace</option>
+                                <option value="launchpad">Launchpad (Show selection)</option>
+                                <option value="converter">Universal Converter</option>
+                                <option value="pdf">PDF Toolkit</option>
+                            </select>
+                            <p class="settings-help">When "Always bypass" is enabled, choose which workspace opens on startup.</p>
+                        </div>
                     </section>
 
                     <section class="settings-card">
@@ -634,6 +921,52 @@
                         <p class="settings-help" id="environment-support">Support status: checking local converter tools.</p>
                     </section>
 
+                    <section class="settings-card settings-card-wide updater-card">
+                        <h4>Application Updates</h4>
+                        <div class="updater-container">
+                            <div class="updater-status-row">
+                                <div class="updater-info">
+                                    <span class="about-label">Status</span>
+                                    <strong id="updater-status-text">Up to date</strong>
+                                    <p class="settings-help" id="updater-version-info">Checking configuration...</p>
+                                </div>
+                                <div class="updater-actions-inline">
+                                    <button id="updater-check-btn" class="outline-btn no-drag updater-btn">Check for Updates</button>
+                                    <button id="updater-download-btn" class="primary-btn glow-btn no-drag updater-btn hidden">Download Update</button>
+                                    <button id="updater-install-btn" class="primary-btn glow-btn no-drag updater-btn hidden">Restart & Install</button>
+                                </div>
+                            </div>
+                            
+                            <div id="updater-progress-container" class="updater-progress-container hidden">
+                                <div class="updater-progress-meta">
+                                    <span id="updater-progress-percent">0%</span>
+                                    <span id="updater-progress-speed">0 KB/s</span>
+                                </div>
+                                <div class="updater-progress-bar">
+                                    <div id="updater-progress-fill" class="updater-progress-fill"></div>
+                                </div>
+                            </div>
+
+                            <div class="updater-toggles">
+                                <label class="toggle-row" for="settings-auto-check-updates">
+                                    <div>
+                                        <span class="toggle-title">Automatically check for updates</span>
+                                        <span class="toggle-copy">Check for new releases automatically when ConvertHub starts.</span>
+                                    </div>
+                                    <input id="settings-auto-check-updates" type="checkbox" checked>
+                                </label>
+                                
+                                <label class="toggle-row" for="settings-auto-download-updates">
+                                    <div>
+                                        <span class="toggle-title">Automatically download updates</span>
+                                        <span class="toggle-copy">Download updates automatically when they are found.</span>
+                                    </div>
+                                    <input id="settings-auto-download-updates" type="checkbox">
+                                </label>
+                            </div>
+                        </div>
+                    </section>
+
                     <section class="settings-card settings-card-wide about-card">
                         <div class="about-header">
                             <div>
@@ -644,8 +977,11 @@
                         </div>
 
                         <p class="about-copy">
-                            ConvertHub is a desktop conversion workspace for audio, video, images, documents, and archives,
-                            built to keep batch conversion simple without leaving your machine.
+                            ConvertHub v2 is a premium desktop conversion workspace designed to run entirely offline on your local machine. It provides high-performance batch conversions across audio, video, image, document, and archive formats using fine-tuned conversion configurations.
+                        </p>
+
+                        <p class="about-copy" style="margin-top:8px;">
+                            The integrated Smart PDF Toolkit enables compiling images into PDFs, merging multiple PDF files, extracting high-resolution page assets, enforcing optional password encryption, and customizing layout orientation, margins, and paper sizes.
                         </p>
 
                         <div class="about-grid">
@@ -682,15 +1018,15 @@
                         <div class="about-highlights">
                             <div class="about-highlight">
                                 <i class="fa-solid fa-layer-group"></i>
-                                <span>Batch queue management with live progress tracking</span>
+                                <span>High-performance batch queue management with real-time conversion progress</span>
                             </div>
                             <div class="about-highlight">
                                 <i class="fa-solid fa-sliders"></i>
-                                <span>Saved defaults for theme, output quality, folders, and behavior</span>
+                                <span>Saved defaults for workspace presets, output quality, theme, and destination folders</span>
                             </div>
                             <div class="about-highlight">
-                                <i class="fa-regular fa-bell"></i>
-                                <span>Built-in notification history for conversion and app activity</span>
+                                <i class="fa-solid fa-cloud-arrow-down"></i>
+                                <span>Integrated GitHub auto-updater to download and install releases seamlessly</span>
                             </div>
                         </div>
                     </section>

@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, protocol, net } = require('electron');
 const path = require('path');
 const { pathToFileURL } = require('url');
+const { initUpdater } = require('./core/updater');
 
 protocol.registerSchemesAsPrivileged([
     {
@@ -175,6 +176,9 @@ function createWindow() {
     mainWindow.on('enter-full-screen', emitWindowState);
     mainWindow.on('leave-full-screen', emitWindowState);
     mainWindow.webContents.once('did-finish-load', emitWindowState);
+
+    // Initialize auto-updater
+    initUpdater(mainWindow);
 }
 
 app.whenReady().then(() => {
@@ -193,6 +197,11 @@ app.whenReady().then(() => {
     createWindow();
 });
 
+
+// Application version IPC
+ipcMain.handle('get-app-version', () => {
+    return app.getVersion();
+});
 
 // Window controls IPC
 ipcMain.handle('window-minimize', (event) => {
@@ -502,6 +511,36 @@ ipcMain.handle('pdf:create-images-zip', async (_event, data) => {
     } catch (error) {
         console.error('[main] Error in pdf:create-images-zip:', error);
         return { success: false, error: error.message || 'Failed to create ZIP.' };
+    }
+});
+
+ipcMain.handle('pdf:watermark', async (_event, data) => {
+    try {
+        const processor = getPDFProcessor();
+        return await processor.watermarkPDF(data);
+    } catch (error) {
+        console.error('[main] Error in pdf:watermark:', error);
+        return { success: false, error: error.message || 'Failed to watermark PDF.' };
+    }
+});
+
+ipcMain.handle('pdf:compress-lossless', async (_event, data) => {
+    try {
+        const processor = getPDFProcessor();
+        return await processor.compressPDFLossless(data);
+    } catch (error) {
+        console.error('[main] Error in pdf:compress-lossless:', error);
+        return { success: false, error: error.message || 'Failed to compress PDF.' };
+    }
+});
+
+ipcMain.handle('pdf:organize', async (_event, data) => {
+    try {
+        const processor = getPDFProcessor();
+        return await processor.organizePDF(data);
+    } catch (error) {
+        console.error('[main] Error in pdf:organize:', error);
+        return { success: false, error: error.message || 'Failed to organize PDF.' };
     }
 });
 
