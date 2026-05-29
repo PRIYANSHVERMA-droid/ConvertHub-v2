@@ -7,7 +7,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/license-MIT-blue">
   <img src="https://img.shields.io/badge/platform-Windows-blue">
-  <img src="https://img.shields.io/badge/version-2.0-green">
+  <img src="https://img.shields.io/badge/version-2.1-green">
   <img src="https://img.shields.io/badge/built%20with-Electron-purple">
 </p>
 
@@ -21,32 +21,58 @@
 
 ## 🚀 Overview
 
-ConvertHub v2 is a modern desktop file converter focused on clean UI, curated formats, and high-performance processing.
+ConvertHub v2 is a offline desktop conversion workspace focused on a clean UI, curated formats, high-performance processing, and advanced document management.
 
-It integrates powerful engines like **FFmpeg**, **LibreOffice**, and **7-Zip** to handle multiple file types in one unified application — without requiring external installations.
+It integrates powerful, local engines like **FFmpeg**, **LibreOffice**, and **7-Zip** to handle multiple file formats in one unified application without requiring external installations or cloud connections.
 
 ---
 
 ## 🖥 Preview
 
+### ⚡ Universal File Converter
+
+| Dark Theme | Light Theme |
+| :---: | :---: |
+| ![File Converter Dark](https://raw.githubusercontent.com/PRIYANSHVERMA-droid/ConvertHub-v2/main/assets/screenshots/File%20Converter%20Ui%20dark.png) | ![File Converter Light](https://raw.githubusercontent.com/PRIYANSHVERMA-droid/ConvertHub-v2/main/assets/screenshots/File%20Converter%20Ui%20light.png) |
+
+#### 📂 File Conversion Walkthrough
 <p align="center">
-  <img src="https://raw.githubusercontent.com/PRIYANSHVERMA-droid/ConvertHub-v2/main/assets/screenshots/ui.png" width="850">
+  <img src="https://raw.githubusercontent.com/PRIYANSHVERMA-droid/ConvertHub-v2/main/assets/screenshots/File%20conversion%20walkthrough.gif" width="850">
+</p>
+
+### 🛠 Smart PDF Toolkit
+
+| Dark Theme | Light Theme |
+| :---: | :---: |
+| ![PDF Toolkit Dark](https://raw.githubusercontent.com/PRIYANSHVERMA-droid/ConvertHub-v2/main/assets/screenshots/PDF%20Toolkit%20Ui%20dark.png) | ![PDF Toolkit Light](https://raw.githubusercontent.com/PRIYANSHVERMA-droid/ConvertHub-v2/main/assets/screenshots/PDF%20Toolkit%20Ui%20light.png) |
+
+#### 📂 PDF Toolkit Walkthrough
+<p align="center">
+  <img src="https://raw.githubusercontent.com/PRIYANSHVERMA-droid/ConvertHub-v2/main/assets/screenshots/PDF%20Toolkit%20walkthrough.gif" width="850">
 </p>
 
 ---
 
 ## 🔥 Features
 
-- 🎵 Audio conversion (MP3, WAV, AAC, FLAC)
-- 🎬 Video conversion (MP4, MKV, MOV, AVI)
-- 🖼 Image conversion (JPG, PNG, WEBP)
-- 📄 Document conversion via LibreOffice
-- 📦 Archive compression & extraction via 7-Zip
+### ⚡ Universal File Converter
+- 🎵 **Audio conversion**: Support for MP3, WAV, AAC, and FLAC.
+- 🎬 **Video conversion**: Support for MP4, MKV, MOV, and AVI.
+- 🖼 **Image conversion**: Support for JPG, PNG, and WEBP.
+- 📄 **Document conversion**: Offline document conversions powered by LibreOffice.
+- 📦 **Archive compression & extraction**: Archive management powered by 7-Zip.
+- ⚡ **GPU-accelerated encoding**: Supports hardware acceleration for media conversion.
+- ⚡ **Conversion queue system**: Support for high-performance batch operations.
+- ⚡ **Presets**: Optimized conversion presets for quick configurations.
 
-- ⚡ GPU-accelerated encoding (when supported)
-- ⚡ Built-in conversion presets
-- ⚡ Conversion queue system
-- ⚡ Fully bundled engines (no setup required)
+### 🛠 Smart PDF Toolkit
+- 🖼 **Images to PDF Compilation**: Convert a list of images into a single PDF (configure layouts, margins, orientations, background colors, titles, and password encryption).
+- 🔗 **PDF Merger**: Merge multiple PDF files together or compile specific page ranges.
+- 📁 **Page Extraction**: Extract specific pages from a PDF as individual files or compiled images.
+- 📦 **PDF to ZIP converter**: Export document pages directly as a high-resolution image ZIP archive.
+- ✂ **PDF Visual Organizer**: Interactive workspace to drag, rotate, delete, or reorganize pages.
+- 📉 **PDF Compression**: Supports pure lossless Flate compression and DPI re-encoded lossy compression.
+- ✍ **PDF Watermarker**: Apply customizable watermarks with configurable text, placement, size, color, opacity, and rotation.
 
 ---
 
@@ -81,19 +107,21 @@ It integrates powerful engines like **FFmpeg**, **LibreOffice**, and **7-Zip** t
 
 ## 🛠 Tech Stack
 
-- **Electron** – Desktop framework  
+- **Electron** – Desktop shell framework  
 - **Node.js** – Backend runtime  
-- **FFmpeg** – Media processing  
-- **LibreOffice** – Document conversion  
-- **7-Zip** – Archive engine
+- **pdf-lib** – PDF creation and editing engine
+- **pdfjs-dist** – PDF rendering and parsing engine
+- **FFmpeg** – Multi-format media processing  
+- **LibreOffice** – Document conversion engine  
+- **7-Zip** – High-ratio archive engine
 
 ---
 
 ## 📦 Installation
 
-1. Go to the **Releases** section  
-2. Download the latest `.exe`  
-3. Run installer  
+1. Go to the **Releases** section.  
+2. Download the latest `.exe` installer.  
+3. Run the installer to configure.  
 
 👉 Download here:  
 https://github.com/PRIYANSHVERMA-droid/ConvertHub-v2/releases  
@@ -108,18 +136,20 @@ ConvertHub v2
 ├ assets
 │   ├ screenshots
 │   │   ├ icon.png
-│   │   └ ui.png
+│   │   ├ File Converter Ui dark.png
+│   │   ├ File Converter Ui light.png
+│   │   ├ File conversion walkthrough.gif
+│   │   ├ PDF Toolkit Ui dark.png
+│   │   ├ PDF Toolkit Ui light.png
+│   │   ├ PDF Toolkit walkthrough.gif
+│   │   ├ UI Dark.png
+│   │   └ UI light.png
 │   └ app-icon.ico
 │
 ├ core
-│   └ conversionManager.js
-│
-├ Data
-│   └ settings
-│       ├ cache
-│       ├ crash
-│       ├ updates
-│       └ user
+│   ├ conversionManager.js
+│   ├ pdfProcessor.js
+│   └ updater.js
 │
 ├ dist
 │   ├ win-unpacked
@@ -159,32 +189,31 @@ ConvertHub v2
 └ .gitattributes
 ```
 
-
 ---
 
 ## ⚠️ Notes
 
-- Optimized for **Windows**
-- GPU acceleration depends on hardware support  
-- Conversion speed varies based on file size, format, and system performance  
-- Engines are bundled inside the app  
-- Antivirus may flag binaries (false positives)  
+- Optimized for **Windows**.
+- GPU acceleration depends on hardware support.  
+- All engines run 100% locally; no internet connection is required.  
+- Antivirus software may flag bundled binaries as false positives.  
 
 ---
 
 ## 🔮 Future Improvements
 
-- Cross-platform support (Linux / macOS)  
-- Auto-updater improvements  
-- Performance tuning  
+- 🐧 **Cross-Platform Support** – Porting configurations and engine wrappers to macOS and Linux platforms.
+- 👁 **Offline OCR Support** – Integrating local Tesseract engine to recognize text inside scanned PDF documents and images.
+- 🎨 **Preset Creator** – User interface to define, save, and export custom conversion parameter presets.
+- ⚡ **Batch PDF Operations** – Support for batch-processing PDF watermarking, compression, and page organizing.
 
 ---
 
 ## 🤝 Contributing
 
-1. Fork the repository  
-2. Create a new branch  
-3. Submit a pull request  
+1. Fork the repository.  
+2. Create a new branch.  
+3. Submit a pull request.  
 
 ---
 
