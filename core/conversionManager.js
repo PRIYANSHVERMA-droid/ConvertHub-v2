@@ -272,6 +272,157 @@ function registerActiveProcess(controller, proc) {
     return cleanup;
 }
 
+async function pathExists(targetPath) {
+    try {
+        await fs.promises.access(targetPath, fs.constants.F_OK);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+function isLikelyAbsolutePath(targetPath) {
+    return path.isAbsolute(targetPath) || /^[A-Za-z]:[\\/]/.test(String(targetPath || ''));
+}
+
+async function ensureDirectoryExists(dirPath) {
+    await fs.promises.mkdir(dirPath, { recursive: true });
+}
+
+function normalizeFormat(format) {
+    return String(format || '').trim().replace(/^\./, '').toLowerCase();
+}
+
+function formatDisplayName(targetPath) {
+    return path.basename(String(targetPath || '').trim()) || String(targetPath || '').trim();
+}
+
+function normalizeOutputKey(targetPath) {
+    return path.normalize(targetPath).toLowerCase();
+}
+
+function splitOutputPath(targetPath) {
+    const parsed = path.parse(targetPath);
+    return {
+        dir: parsed.dir,
+        name: parsed.name,
+        ext: parsed.ext
+    };
+}
+
+async function probeExecutable(candidate, probeArgs) {
+    return new Promise((resolve) => {
+        let settled = false;
+
+        const finish = (available) => {
+            if (settled) {
+                return;
+            }
+            settled = true;
+            resolve(available);
+        };
+
+        let proc;
+        try {
+            proc = spawn(candidate, probeArgs, { windowsHide: true });
+        } catch (error) {
+            if (error && error.code === 'ENOENT') {
+                finish(false);
+                return;
+            }
+            finish(isLikelyAbsolutePath(candidate));
+            return;
+        }
+
+        proc.on('error', (error) => {
+            if (error && error.code === 'ENOENT') {
+                finish(false);
+                return;
+            }
+            finish(isLikelyAbsolutePath(candidate));
+        });
+
+        proc.on('spawn', () => finish(true));
+        proc.on('close', (code) => finish(code !== 127));
+    });
+}
+
+async function resolveExecutable(engine) {
+    if (resolvedEngineExecutables.has(engine)) {
+        return resolvedEngineExecutables.get(engine);
+    }
+
+    const definition = ENGINE_DEFINITIONS[engine];
+    if (!definition) {
+        return null;
+    }
+
+    for (const candidate of definition.candidates) {
+        if (isLikelyAbsolutePath(candidate) && !await pathExists(candidate)) {
+            continue;
+        }
+        if (await probeExecutable(candidate, definition.probeArgs)) {
+            resolvedEngineExecutables.set(engine, candidate);
+            return candidate;
+        }
+    }
+
+    resolvedEngineExecutables.set(engine, null);
+    return null;
+}
+
+async function getEngineStatus() {
+    const entries = await Promise.all(Object.keys(ENGINE_DEFINITIONS).map(async (engine) => {
+        const executable = await resolveExecutable(engine);
+        return [engine, {
+            available: Boolean(executable),
+            executable: executable || null
+        }];
+    }));
+
+    return {
+        isPackaged: IS_PACKAGED,
+        platform: PLATFORM,
+        engineRoot: IS_PACKAGED ? PROD_ENGINES_ROOT : DEV_ENGINES_ROOT,
+        engines: Object.fromEntries(entries)
+    };
+}
+
+function getEngineForType(type) {
+    switch (type) {
+        case 'audio':
+        case 'video':
+        case 'image':
+            return 'ffmpeg';
+        case 'document':
+            return 'libreoffice';
+        case 'archive':
+            return '7zip';
+        default:
+            return null;
+    }
+}
+
+function getJobType(job) {
+    if (job && job.type) {
+        return job.type;
+    }
+
+    return detectTypeFromExtension(path.extname(job?.inputPath || ''));
+}
+
+function getJobEngine(job) {
+    return getEngineForType(getJobType(job));
+}
+
+function getEngineConcurrencyLimit(engine) {
+    return ENGINE_CONCURRENCY_LIMITS[engine] || 1;
+}
+
+function getBatchWorkerLimit(jobCount) {
+    return Math.max(1, Math.min(DEFAULT_BATCH_WORKER_LIMIT, jobCount));
+}
+
 function getFFmpegCodecArgs(type, format) {
     if (type === 'audio') {
         switch (format) {
