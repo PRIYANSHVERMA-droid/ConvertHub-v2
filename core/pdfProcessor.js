@@ -317,9 +317,11 @@ async function saveExtractedPage({ base64Data, outputFolder, fileName }) {
     };
 }
 
-async function mergePDFs({ pdfPaths, outputFolder, pdfName }) {
-    if (!Array.isArray(pdfPaths) || pdfPaths.length < 2) {
-        throw new Error('Select at least two PDFs to merge.');
+async function mergePDFs({ pdfPaths, outputFolder, pdfName, pageList }, progressCb) {
+    const hasPdfPaths = Array.isArray(pdfPaths) && pdfPaths.length >= 2;
+    const hasPageList = Array.isArray(pageList) && pageList.length > 0;
+    if (!hasPdfPaths && !hasPageList) {
+        throw new Error('Select at least two PDFs to merge or provide a page list.');
     }
     if (!outputFolder) {
         throw new Error('Output folder is not defined.');
@@ -330,7 +332,79 @@ async function mergePDFs({ pdfPaths, outputFolder, pdfName }) {
     const mergedPdf = await PDFDocument.create();
     let mergedPageCount = 0;
 
-    for (const pdfPath of pdfPaths) {
+    // Helper to parse range strings like "1-3,5" into zero-based page indices
+    function parsePageRangeString(rangeStr, totalPages) {
+        if (!rangeStr || !String(rangeStr).trim()) return null;
+        const parts = String(rangeStr).split(',').map(p => p.trim()).filter(Boolean);
+        const indices = new Set();
+        for (const part of parts) {
+            if (part.includes('-')) {
+                const [a, b] = part.split('-').map(Number);
+                if (isNaN(a) || isNaN(b)) continue;
+                const start = Math.max(1, Math.min(a, b));
+                const end = Math.min(totalPages, Math.max(a, b));
+                for (let i = start; i <= end; i++) indices.add(i - 1);
+            } else {
+                const n = Number(part);
+                if (isNaN(n)) continue;
+                if (n >= 1 && n <= totalPages) indices.add(n - 1);
+            }
+        }
+        const arr = Array.from(indices).sort((x, y) => x - y);
+        return arr.length ? arr : null;
+    }
+    // If explicit pageList is provided, merge pages in that order
+    if (hasPageList) {
+        let pagesMergedSoFar = 0;
+        const totalPagesToMerge = pageList.length;
+        const cache = new Map();
+
+        for (const item of pageList) {
+            const pdfPath = item?.path;
+            const pageIndex = Number.isFinite(item?.pageIndex) ? Number(item.pageIndex) : null;
+            if (!pdfPath || pageIndex === null) {
+                throw new Error('Invalid pageList entry. Each item must have {path, pageIndex}');
+            }
+
+            if (!fs.existsSync(pdfPath)) {
+                throw new Error(`PDF file does not exist: ${pdfPath}`);
+            }
+
+            let sourcePdf = cache.get(pdfPath);
+            if (!sourcePdf) {
+                const bytes = await fs.promises.readFile(pdfPath);
+                try {
+                    sourcePdf = await PDFDocument.load(bytes, { ignoreEncryption: false });
+                } catch (err) {
+                    if (String(err?.message || '').toLowerCase().includes('encrypted')) {
+                        throw new Error(`${path.basename(pdfPath)} is encrypted or password-protected and cannot be merged automatically.`);
+                    }
+                    throw new Error(`${path.basename(pdfPath)} could not be opened as a PDF.`);
+                }
+                cache.set(pdfPath, sourcePdf);
+            }
+
+            const copiedPages = await mergedPdf.copyPages(sourcePdf, [pageIndex]);
+            copiedPages.forEach((p) => mergedPdf.addPage(p));
+            pagesMergedSoFar++;
+
+            if (typeof progressCb === 'function') {
+                try {
+                    const percent = Math.min(100, Math.round((pagesMergedSoFar / totalPagesToMerge) * 100));
+                    progressCb({ percent, message: `Merging pages (${pagesMergedSoFar}/${totalPagesToMerge})` });
+                } catch (err) { }
+            }
+        }
+
+        mergedPageCount = totalPagesToMerge;
+
+    } else {
+        // Pre-scan all PDFs to compute total pages to merge and store loaded docs
+        const sources = [];
+        for (const entry of pdfPaths) {
+        const pdfPath = typeof entry === 'string' ? entry : (entry && entry.path);
+        const rangeStr = typeof entry === 'object' && entry ? (entry.range || '') : '';
+
         if (!pdfPath || !fs.existsSync(pdfPath)) {
             throw new Error(`PDF file does not exist: ${pdfPath || 'Unknown file'}`);
         }
@@ -346,9 +420,33 @@ async function mergePDFs({ pdfPaths, outputFolder, pdfName }) {
             throw new Error(`${path.basename(pdfPath)} could not be opened as a PDF.`);
         }
 
-        const copiedPages = await mergedPdf.copyPages(sourcePdf, sourcePdf.getPageIndices());
-        copiedPages.forEach((page) => mergedPdf.addPage(page));
-        mergedPageCount += copiedPages.length;
+        const total = sourcePdf.getPageCount();
+        const pageIndices = parsePageRangeString(rangeStr, total) || sourcePdf.getPageIndices();
+            sources.push({ pdfPath, fileName: path.basename(pdfPath), sourcePdf, pageIndices });
+            mergedPageCount += pageIndices.length;
+        }
+
+        const totalPagesToMerge = mergedPageCount;
+        let pagesMergedSoFar = 0;
+
+        // Now copy pages and emit progress updates
+        for (const src of sources) {
+            const { sourcePdf, pageIndices, fileName } = src;
+            const copiedPages = await mergedPdf.copyPages(sourcePdf, pageIndices);
+            for (let i = 0; i < copiedPages.length; i++) {
+                mergedPdf.addPage(copiedPages[i]);
+                pagesMergedSoFar++;
+
+                if (typeof progressCb === 'function' && totalPagesToMerge > 0) {
+                    const percent = Math.min(100, Math.round((pagesMergedSoFar / totalPagesToMerge) * 100));
+                    try {
+                        progressCb({ percent, message: `Merging ${fileName} (${pagesMergedSoFar}/${totalPagesToMerge})` });
+                    } catch (err) {
+                        // ignore progress callback errors
+                    }
+                }
+            }
+        }
     }
 
     if (mergedPageCount === 0) {

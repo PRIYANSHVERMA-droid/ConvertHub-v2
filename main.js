@@ -470,7 +470,15 @@ ipcMain.handle('pdf:create', async (_event, data) => {
 ipcMain.handle('pdf:merge', async (_event, data) => {
     try {
         const processor = getPDFProcessor();
-        return await processor.mergePDFs(data);
+        return await processor.mergePDFs(data, (progress) => {
+            try {
+                // Attach a fileId to group merge progress events
+                const fileId = data?.pdfName || `merge:${Date.now()}`;
+                relayConversionProgress({ fileId, percent: progress.percent || 0, message: progress.message || 'Merging PDFs' });
+            } catch (err) {
+                // ignore
+            }
+        });
     } catch (error) {
         console.error('[main] Error in pdf:merge:', error);
         return { success: false, error: error.message || 'Failed to merge PDFs.' };

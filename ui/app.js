@@ -180,6 +180,9 @@
     const pdfMergePickFolderBtn = document.getElementById('pdf-merge-pick-folder-btn');
     const pdfMergeOpenFolderBtn = document.getElementById('pdf-merge-open-folder-btn');
     const pdfMergeBtn = document.getElementById('pdf-merge-btn');
+    const pdfMergedPagesSection = document.getElementById('pdf-merged-pages-section');
+    const pdfMergedPagesList = document.getElementById('pdf-merged-pages-list');
+    const pdfMergedClearBtn = document.getElementById('pdf-merged-clear-btn');
     const sidebarImgToPdf = document.getElementById('sidebar-img-to-pdf');
     const sidebarPdfToImg = document.getElementById('sidebar-pdf-to-img');
     const sidebarMergePdf = document.getElementById('sidebar-merge-pdf');
@@ -218,6 +221,9 @@
         document: 'Document',
         archive: 'Archive'
     };
+
+    let pdfBankDrag = null;
+    let pdfPageDragId = null;
 
     const PRESET_CATALOG = {
         audio: [
@@ -2028,7 +2034,11 @@
                     <div class="thumb-title" title="${safeName}">${safeName}</div>
                     <div class="thumb-meta">${formatBytes(item.size)} &bull; Position ${index + 1}</div>
                 </div>
+                <div class="merge-range">
+                    <input type="text" class="glass-input pdf-merge-range-input" placeholder="Pages (e.g. 1-3,5)" value="${escapeHtml(item.range || '')}" title="Specify page range for this file. Leave empty to include all pages.">
+                </div>
                 <button class="thumb-act-btn drag-btn" title="Drag to reorder"><i class="fa-solid fa-grip-vertical"></i></button>
+                <button class="thumb-act-btn preview-btn" title="Preview pages"><i class="fa-regular fa-grip"></i></button>
                 <button class="thumb-act-btn remove-btn" title="Remove PDF"><i class="fa-solid fa-xmark"></i></button>
             `;
 
@@ -2068,8 +2078,34 @@
                 updatePdfButtons();
             });
 
+            const rangeInputEl = card.querySelector('.pdf-merge-range-input');
+            if (rangeInputEl) {
+                rangeInputEl.addEventListener('input', (ev) => {
+                    const val = String(ev.target.value || '').trim();
+                    const idx = pdfMergeFiles.findIndex((e) => e.id === item.id);
+                    if (idx >= 0) {
+                        pdfMergeFiles[idx].range = val;
+                    }
+                });
+            }
+
             pdfMergeList.appendChild(card);
         });
+
+        // Attach preview button handlers for loading page thumbnails
+        Array.from(pdfMergeList.querySelectorAll('.thumb-act-btn.preview-btn')).forEach((btn) => {
+            btn.addEventListener('click', async (ev) => {
+                const parent = btn.closest('.pdf-thumb-card');
+                const id = parent?.dataset?.id;
+                const entry = pdfMergeFiles.find(e => e.id === id);
+                if (!entry) return;
+                await loadPdfThumbnailsFor(entry);
+            });
+        });
+
+        // Update merged pages section visibility
+        pdfMergedPagesSection?.classList.toggle('hidden', pdfMergedPages.length === 0);
+        renderMergedPagesList();
 
         updatePdfButtons();
     }
@@ -2082,6 +2118,126 @@
         renderPdfMergeList();
         updatePdfButtons();
     }
+
+    async function loadPdfThumbnailsFor(entry) {
+        if (!entry || !entry.path) return;
+        const pdfSrc = `converthub-media:?path=${encodeURIComponent(entry.path)}`;
+        try {
+            const loadingTask = window.pdfjsLib.getDocument(pdfSrc);
+            const pdf = await loadingTask.promise;
+            const total = pdf.numPages;
+            const bank = document.createElement('div');
+            bank.className = 'pdf-thumb-bank';
+
+            for (let i = 1; i <= total; i++) {
+                const page = await pdf.getPage(i);
+                const viewport = page.getViewport({ scale: 0.5 });
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.round(viewport.width);
+                canvas.height = Math.round(viewport.height);
+                await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+                const thumb = canvas.toDataURL('image/png');
+
+                const thumbWrap = document.createElement('div');
+                thumbWrap.className = 'pdf-bank-thumb';
+                thumbWrap.draggable = true;
+                const img = document.createElement('img');
+                img.src = thumb;
+                thumbWrap.appendChild(img);
+
+                // Drag to merged pages
+                thumbWrap.addEventListener('dragstart', () => {
+                    pdfBankDrag = { path: pdfSrc, pageIndex: i - 1, name: entry.name, thumb };
+                });
+                thumbWrap.addEventListener('dragend', () => {
+                    pdfBankDrag = null;
+                });
+
+                bank.appendChild(thumbWrap);
+            }
+
+            // Show bank below the selected card (simple placement) — insert after the card element
+            const cardEl = pdfMergeList.querySelector(`[data-id="${entry.id}"]`);
+            if (cardEl) {
+                // remove any existing bank sibling
+                const existing = cardEl.nextElementSibling;
+                if (existing && existing.classList && existing.classList.contains('pdf-thumb-bank')) existing.remove();
+                cardEl.parentNode.insertBefore(bank, cardEl.nextSibling);
+            }
+        } catch (err) {
+            console.error('Failed to load PDF thumbnails:', err);
+            showToast('Failed to generate page previews for this PDF.', 'error');
+        }
+    }
+
+    // Merged pages data structure and rendering
+    const pdfMergedPages = [];
+
+    function renderMergedPagesList() {
+        if (!pdfMergedPagesList) return;
+        pdfMergedPagesList.innerHTML = '';
+        pdfMergedPages.forEach((p, idx) => {
+            const card = document.createElement('div');
+            card.className = 'pdf-page-card no-drag';
+            card.draggable = true;
+            card.dataset.id = p.id;
+            card.innerHTML = `
+                <img src="${p.thumb || ''}" alt="page-${p.pageIndex+1}">
+                <div class="page-label">${p.name} • ${p.pageIndex + 1}</div>
+            `;
+
+            card.addEventListener('dragstart', () => {
+                pdfPageDragId = p.id;
+                card.classList.add('queue-item-dragging');
+            });
+            card.addEventListener('dragend', () => {
+                pdfPageDragId = null;
+                card.classList.remove('queue-item-dragging');
+            });
+
+            card.querySelector('img')?.addEventListener('dblclick', () => {
+                // open full-size in new window
+                const win = window.open('', '_blank');
+                if (win) win.document.body.innerHTML = `<img src="${p.thumb || ''}" style="max-width:100%">`;
+            });
+
+            pdfMergedPagesList.appendChild(card);
+        });
+    }
+
+    // Drag target for merged pages
+    if (pdfMergedPagesList) {
+        pdfMergedPagesList.addEventListener('dragover', (ev) => {
+            ev.preventDefault();
+        });
+        pdfMergedPagesList.addEventListener('drop', (ev) => {
+            ev.preventDefault();
+            if (pdfBankDrag) {
+                const id = `merged-page-${Date.now()}-${Math.random().toString(36).slice(2,6)}`;
+                pdfMergedPages.push({ id, path: pdfBankDrag.path, pageIndex: pdfBankDrag.pageIndex, name: pdfBankDrag.name, thumb: pdfBankDrag.thumb });
+                renderMergedPagesList();
+                pdfMergedPagesSection?.classList.remove('hidden');
+            }
+        });
+    }
+
+    // Allow reordering inside merged pages via drop
+    pdfMergedPagesList?.addEventListener('drop', (ev) => {
+        ev.preventDefault();
+        // handled by dragend on cards for now
+    });
+
+    // Clear merged pages
+    function clearMergedPages() {
+        pdfMergedPages.length = 0;
+        renderMergedPagesList();
+        pdfMergedPagesSection?.classList.add('hidden');
+    }
+
+    pdfMergedClearBtn?.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        clearMergedPages();
+    });
 
     function setPdfMode(mode) {
         const isExtractMode = mode === 'pdf-to-img';
@@ -2217,6 +2373,8 @@
             name: file.name,
             path: file.path,
             size: file.size
+            ,
+            range: ''
         }));
 
         pdfMergeFiles = [...pdfMergeFiles, ...prepared];
@@ -2241,11 +2399,18 @@
         pdfMergeBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Merging PDFs';
 
         try {
-            const result = await window.app?.mergePDFs?.({
-                pdfPaths: pdfMergeFiles.map((file) => file.path),
+            // If user assembled page-level list, send explicit pageList; otherwise send per-file ranges
+            const payload = {
                 outputFolder,
                 pdfName: pdfMergeOutputName?.value || 'Merged_PDF'
-            });
+            };
+            if (pdfMergedPages.length > 0) {
+                payload.pageList = pdfMergedPages.map(p => ({ path: p.path, pageIndex: p.pageIndex }));
+            } else {
+                payload.pdfPaths = pdfMergeFiles.map((file) => ({ path: file.path, range: file.range }));
+            }
+
+            const result = await window.app?.mergePDFs?.(payload);
 
             if (result?.success) {
                 showToast(`Merged ${result.pageCount || ''} pages into ${result.fileName || 'Merged_PDF.pdf'}`, 'success');
