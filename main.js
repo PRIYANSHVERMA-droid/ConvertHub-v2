@@ -467,6 +467,16 @@ ipcMain.handle('pdf:create', async (_event, data) => {
     }
 });
 
+ipcMain.handle('pdf:merge', async (_event, data) => {
+    try {
+        const processor = getPDFProcessor();
+        return await processor.mergePDFs(data);
+    } catch (error) {
+        console.error('[main] Error in pdf:merge:', error);
+        return { success: false, error: error.message || 'Failed to merge PDFs.' };
+    }
+});
+
 ipcMain.handle('pdf:save-page', async (_event, data) => {
     try {
         const processor = getPDFProcessor();

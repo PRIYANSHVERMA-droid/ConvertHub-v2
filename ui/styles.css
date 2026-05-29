@@ -1846,6 +1846,7 @@ select.glass-input {
 
 .card-badges .badge.doc-pdf { color: #f43f5e; background: rgba(244, 63, 94, 0.1); border-color: rgba(244, 63, 94, 0.15); }
 .card-badges .badge.doc-extract { color: #10b981; background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.15); }
+.card-badges .badge.doc-merge { color: #8b5cf6; background: rgba(139, 92, 246, 0.1); border-color: rgba(139, 92, 246, 0.15); }
 
 .launchpad-footer {
     display: flex;
@@ -2930,6 +2931,18 @@ select.glass-input {
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+#pdf-workspace .file-type-icon {
+    width: 80px;
+    height: 50px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(239, 68, 68, 0.12);
+    color: #f87171;
+    font-size: 24px;
 }
 
 #pdf-workspace .pdf-thumb-card img {

@@ -317,6 +317,57 @@ async function saveExtractedPage({ base64Data, outputFolder, fileName }) {
     };
 }
 
+async function mergePDFs({ pdfPaths, outputFolder, pdfName }) {
+    if (!Array.isArray(pdfPaths) || pdfPaths.length < 2) {
+        throw new Error('Select at least two PDFs to merge.');
+    }
+    if (!outputFolder) {
+        throw new Error('Output folder is not defined.');
+    }
+
+    await fs.promises.mkdir(outputFolder, { recursive: true });
+
+    const mergedPdf = await PDFDocument.create();
+    let mergedPageCount = 0;
+
+    for (const pdfPath of pdfPaths) {
+        if (!pdfPath || !fs.existsSync(pdfPath)) {
+            throw new Error(`PDF file does not exist: ${pdfPath || 'Unknown file'}`);
+        }
+
+        const bytes = await fs.promises.readFile(pdfPath);
+        let sourcePdf;
+        try {
+            sourcePdf = await PDFDocument.load(bytes, { ignoreEncryption: false });
+        } catch (error) {
+            if (String(error?.message || '').toLowerCase().includes('encrypted')) {
+                throw new Error(`${path.basename(pdfPath)} is encrypted or password-protected and cannot be merged automatically.`);
+            }
+            throw new Error(`${path.basename(pdfPath)} could not be opened as a PDF.`);
+        }
+
+        const copiedPages = await mergedPdf.copyPages(sourcePdf, sourcePdf.getPageIndices());
+        copiedPages.forEach((page) => mergedPdf.addPage(page));
+        mergedPageCount += copiedPages.length;
+    }
+
+    if (mergedPageCount === 0) {
+        throw new Error('No pages were found to merge.');
+    }
+
+    const cleanName = pdfName ? pdfName.trim().replace(/[/\\?%*:|"<>]/g, '_') : 'Merged_PDF';
+    const finalPath = createUniquePath(outputFolder, cleanName || 'Merged_PDF', 'pdf');
+    const pdfBytes = await mergedPdf.save();
+    await fs.promises.writeFile(finalPath, pdfBytes);
+
+    return {
+        success: true,
+        outputPath: finalPath,
+        fileName: path.basename(finalPath),
+        pageCount: mergedPageCount
+    };
+}
+
 async function createImagesZip({ filePaths, outputFolder, zipName }) {
     if (!Array.isArray(filePaths) || filePaths.length === 0) {
         throw new Error('No extracted images were provided for ZIP creation.');
@@ -397,6 +448,7 @@ async function createImagesZip({ filePaths, outputFolder, zipName }) {
 
 module.exports = {
     compileImagesToPDF,
+    mergePDFs,
     saveExtractedPage,
     createImagesZip
 };

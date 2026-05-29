@@ -79,6 +79,7 @@
                         <div class="card-badges">
                             <span class="badge doc-pdf"><i class="fa-regular fa-file-pdf"></i> Images to PDF</span>
                             <span class="badge doc-extract"><i class="fa-solid fa-file-image"></i> PDF to Images</span>
+                            <span class="badge doc-merge"><i class="fa-solid fa-layer-group"></i> Merge PDFs</span>
                         </div>
                     </div>
                 </div>
@@ -238,11 +239,12 @@
                 <div class="pdf-workspace-header">
                     <div class="pdf-header-left">
                         <h2><i class="fa-solid fa-file-pdf text-gradient-pdf"></i> PDF Toolkit</h2>
-                        <p>Convert images to PDF or extract images from PDF files.</p>
+                        <p>Convert images, extract pages, or merge PDF files.</p>
                     </div>
                     <div class="pdf-mode-tabs no-drag">
                         <button class="pdf-tab active" data-mode="img-to-pdf" id="pdf-tab-img-to-pdf"><i class="fa-regular fa-image"></i> Images to PDF</button>
                         <button class="pdf-tab" data-mode="pdf-to-img" id="pdf-tab-pdf-to-img"><i class="fa-regular fa-image"></i> PDF to Images</button>
+                        <button class="pdf-tab" data-mode="merge-pdf" id="pdf-tab-merge-pdf"><i class="fa-solid fa-layer-group"></i> Merge PDFs</button>
                     </div>
                 </div>
                 
@@ -290,6 +292,27 @@
                                     </div>
                                     <button class="icon-btn no-drag pdf-remove-file-btn" id="pdf-remove-file-btn" title="Remove PDF"><i class="fa-solid fa-xmark"></i></button>
                                 </div>
+                            </div>
+                        </div>
+
+                        <div id="panel-merge-pdf" class="pdf-panel hidden">
+                            <div class="pdf-upload-zone no-drag" id="pdf-merge-dropzone">
+                                <input type="file" id="pdf-merge-input" multiple accept=".pdf" style="display: none;">
+                                <div class="upload-content">
+                                    <div class="pdf-drop-icon pdf-drop-icon-file"><i class="fa-solid fa-layer-group"></i></div>
+                                    <h3>Drop PDFs here</h3>
+                                    <p>Select two or more PDFs and merge them in order.</p>
+                                    <button class="pdf-browse-btn no-drag" type="button"><i class="fa-regular fa-folder"></i> Browse Files</button>
+                                </div>
+                            </div>
+
+                            <div class="pdf-image-grid-section hidden" id="pdf-merge-list-section">
+                                <div class="grid-header">
+                                    <h4>PDFs to Merge (<span id="pdf-merge-count">0</span>)</h4>
+                                    <button class="clear-btn no-drag" id="pdf-merge-clear-btn"><i class="fa-regular fa-trash-can"></i> Clear All</button>
+                                </div>
+                                <div class="pdf-uploaded-list" id="pdf-merge-list"></div>
+                                <p class="pdf-reorder-note"><i class="fa-solid fa-circle-info"></i> Drag to reorder PDFs. They will be merged from top to bottom.</p>
                             </div>
                         </div>
                     </main>
@@ -480,6 +503,35 @@
                             <div class="settings-footer-bar">
                                 <button id="pdf-extract-btn" class="primary-btn glow-btn no-drag" disabled>
                                     <i class="fa-solid fa-file-image"></i> Extract Images <i class="fa-solid fa-arrow-right"></i>
+                                </button>
+                            </div>
+                        </section>
+
+                        <section class="pdf-sidebar-section hidden" id="sidebar-merge-pdf">
+                            <div class="pdf-sidebar-title">
+                                <h4><i class="fa-solid fa-sliders"></i> Merge Settings</h4>
+                                <i class="fa-solid fa-chevron-up"></i>
+                            </div>
+                            <div class="settings-form-scroll">
+                                <div class="form-group">
+                                    <label>Output Filename</label>
+                                    <div class="pdf-name-field">
+                                        <input type="text" id="pdf-merge-output-name" class="glass-input no-drag" value="Merged_PDF" placeholder="e.g. combined">
+                                        <span>.pdf</span>
+                                    </div>
+                                </div>
+                                <div class="form-group folder-group">
+                                    <label>Output Folder</label>
+                                    <div class="folder-input-wrapper">
+                                        <input type="text" id="pdf-merge-folder-input" readonly class="glass-input" placeholder="Same as source">
+                                        <button class="icon-btn-small no-drag" id="pdf-merge-pick-folder-btn" title="Browse folder"><i class="fa-regular fa-folder"></i></button>
+                                        <button class="icon-btn-small no-drag" id="pdf-merge-open-folder-btn" title="Open folder"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="settings-footer-bar">
+                                <button id="pdf-merge-btn" class="primary-btn glow-btn no-drag" disabled>
+                                    <i class="fa-solid fa-layer-group"></i> Merge PDFs <i class="fa-solid fa-arrow-right"></i>
                                 </button>
                             </div>
                         </section>

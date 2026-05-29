@@ -129,6 +129,7 @@
     const pdfTabs = Array.from(document.querySelectorAll('.pdf-tab'));
     const pdfImgPanel = document.getElementById('panel-img-to-pdf');
     const pdfExtractPanel = document.getElementById('panel-pdf-to-img');
+    const pdfMergePanel = document.getElementById('panel-merge-pdf');
     const pdfImgDropzone = document.getElementById('pdf-img-dropzone');
     const pdfImgInput = document.getElementById('pdf-img-input');
     const pdfImageGridSection = document.getElementById('pdf-image-grid-section');
@@ -168,8 +169,20 @@
     const pdfExtractPickFolderBtn = document.getElementById('pdf-extract-pick-folder-btn');
     const pdfExtractOpenFolderBtn = document.getElementById('pdf-extract-open-folder-btn');
     const pdfExtractBtn = document.getElementById('pdf-extract-btn');
+    const pdfMergeDropzone = document.getElementById('pdf-merge-dropzone');
+    const pdfMergeInput = document.getElementById('pdf-merge-input');
+    const pdfMergeListSection = document.getElementById('pdf-merge-list-section');
+    const pdfMergeList = document.getElementById('pdf-merge-list');
+    const pdfMergeCount = document.getElementById('pdf-merge-count');
+    const pdfMergeClearBtn = document.getElementById('pdf-merge-clear-btn');
+    const pdfMergeOutputName = document.getElementById('pdf-merge-output-name');
+    const pdfMergeFolderInput = document.getElementById('pdf-merge-folder-input');
+    const pdfMergePickFolderBtn = document.getElementById('pdf-merge-pick-folder-btn');
+    const pdfMergeOpenFolderBtn = document.getElementById('pdf-merge-open-folder-btn');
+    const pdfMergeBtn = document.getElementById('pdf-merge-btn');
     const sidebarImgToPdf = document.getElementById('sidebar-img-to-pdf');
     const sidebarPdfToImg = document.getElementById('sidebar-pdf-to-img');
+    const sidebarMergePdf = document.getElementById('sidebar-merge-pdf');
 
 
     const DEFAULT_SETTINGS = {
@@ -250,6 +263,9 @@
     let pdfImageIdCounter = 0;
     let pdfImageDragId = null;
     let selectedPdfFile = null;
+    let pdfMergeFiles = [];
+    let pdfMergeIdCounter = 0;
+    let pdfMergeDragId = null;
 
     function getSavedSettings() {
         try {
@@ -1689,12 +1705,19 @@
         return pdfExtractFolderInput?.value || appSettings.defaultOutputFolder || defaultDownloadsPath || '';
     }
 
+    function getPdfMergeFolder() {
+        return pdfMergeFolderInput?.value || appSettings.defaultOutputFolder || defaultDownloadsPath || '';
+    }
+
     function updatePdfButtons() {
         if (pdfCompileBtn) {
             pdfCompileBtn.disabled = false;
         }
         if (pdfExtractBtn) {
             pdfExtractBtn.disabled = !selectedPdfFile;
+        }
+        if (pdfMergeBtn) {
+            pdfMergeBtn.disabled = pdfMergeFiles.length < 2;
         }
     }
 
@@ -1984,13 +2007,93 @@
         updatePdfButtons();
     }
 
+    function renderPdfMergeList() {
+        if (!pdfMergeListSection || !pdfMergeList || !pdfMergeCount) {
+            return;
+        }
+
+        pdfMergeCount.textContent = String(pdfMergeFiles.length);
+        pdfMergeListSection.classList.toggle('hidden', pdfMergeFiles.length === 0);
+        pdfMergeList.innerHTML = '';
+
+        pdfMergeFiles.forEach((item, index) => {
+            const card = document.createElement('div');
+            const safeName = escapeHtml(item.name);
+            card.className = 'pdf-thumb-card no-drag';
+            card.draggable = true;
+            card.dataset.id = item.id;
+            card.innerHTML = `
+                <div class="file-type-icon document"><i class="fa-regular fa-file-pdf"></i></div>
+                <div class="thumb-copy">
+                    <div class="thumb-title" title="${safeName}">${safeName}</div>
+                    <div class="thumb-meta">${formatBytes(item.size)} &bull; Position ${index + 1}</div>
+                </div>
+                <button class="thumb-act-btn drag-btn" title="Drag to reorder"><i class="fa-solid fa-grip-vertical"></i></button>
+                <button class="thumb-act-btn remove-btn" title="Remove PDF"><i class="fa-solid fa-xmark"></i></button>
+            `;
+
+            card.addEventListener('dragstart', () => {
+                pdfMergeDragId = item.id;
+                card.classList.add('queue-item-dragging');
+            });
+            card.addEventListener('dragover', (event) => {
+                event.preventDefault();
+                if (pdfMergeDragId && pdfMergeDragId !== item.id) {
+                    card.classList.add('queue-item-drag-over');
+                }
+            });
+            card.addEventListener('dragleave', () => card.classList.remove('queue-item-drag-over'));
+            card.addEventListener('drop', (event) => {
+                event.preventDefault();
+                card.classList.remove('queue-item-drag-over');
+                if (!pdfMergeDragId || pdfMergeDragId === item.id) {
+                    return;
+                }
+                const fromIndex = pdfMergeFiles.findIndex((entry) => entry.id === pdfMergeDragId);
+                const toIndex = index;
+                if (fromIndex < 0 || toIndex < 0) {
+                    return;
+                }
+                const [moved] = pdfMergeFiles.splice(fromIndex, 1);
+                pdfMergeFiles.splice(toIndex, 0, moved);
+                renderPdfMergeList();
+            });
+            card.addEventListener('dragend', () => {
+                pdfMergeDragId = null;
+                card.classList.remove('queue-item-dragging', 'queue-item-drag-over');
+            });
+            card.querySelector('.remove-btn')?.addEventListener('click', () => {
+                pdfMergeFiles = pdfMergeFiles.filter((entry) => entry.id !== item.id);
+                renderPdfMergeList();
+                updatePdfButtons();
+            });
+
+            pdfMergeList.appendChild(card);
+        });
+
+        updatePdfButtons();
+    }
+
+    function clearPdfMergeFiles() {
+        pdfMergeFiles = [];
+        if (pdfMergeInput) {
+            pdfMergeInput.value = '';
+        }
+        renderPdfMergeList();
+        updatePdfButtons();
+    }
+
     function setPdfMode(mode) {
         const isExtractMode = mode === 'pdf-to-img';
+        const isMergeMode = mode === 'merge-pdf';
+        const isImageMode = mode === 'img-to-pdf';
         pdfTabs.forEach((tab) => tab.classList.toggle('active', tab.dataset.mode === mode));
-        pdfImgPanel?.classList.toggle('hidden', isExtractMode);
+        pdfImgPanel?.classList.toggle('hidden', !isImageMode);
         pdfExtractPanel?.classList.toggle('hidden', !isExtractMode);
-        sidebarImgToPdf?.classList.toggle('hidden', isExtractMode);
+        pdfMergePanel?.classList.toggle('hidden', !isMergeMode);
+        sidebarImgToPdf?.classList.toggle('hidden', !isImageMode);
         sidebarPdfToImg?.classList.toggle('hidden', !isExtractMode);
+        sidebarMergePdf?.classList.toggle('hidden', !isMergeMode);
     }
 
     async function compilePdfImages() {
@@ -2082,6 +2185,84 @@
         pdfFileDetails?.classList.add('hidden');
         pdfFileDropzone?.classList.remove('hidden');
         updatePdfButtons();
+    }
+
+    function addPdfMergeFiles(files) {
+        const selectedFiles = normalizePdfSelectedFiles(files, ['pdf']);
+        if (selectedFiles.length === 0) {
+            showToast('Select valid PDF files to merge.', 'warning');
+            return;
+        }
+
+        const existingPaths = new Set(pdfMergeFiles.map((file) => String(file.path || '').toLowerCase()).filter(Boolean));
+        const uniqueFiles = selectedFiles.filter((file) => {
+            if (!file.path) {
+                return false;
+            }
+            const normalizedPath = file.path.toLowerCase();
+            if (existingPaths.has(normalizedPath)) {
+                return false;
+            }
+            existingPaths.add(normalizedPath);
+            return true;
+        });
+
+        if (uniqueFiles.length === 0) {
+            showToast('Those PDFs are already in the merge list.', 'info');
+            return;
+        }
+
+        const prepared = uniqueFiles.map((file) => ({
+            id: `pdf-merge-${pdfMergeIdCounter++}`,
+            name: file.name,
+            path: file.path,
+            size: file.size
+        }));
+
+        pdfMergeFiles = [...pdfMergeFiles, ...prepared];
+        renderPdfMergeList();
+        showToast(`${prepared.length} PDF${prepared.length > 1 ? 's' : ''} added`, 'info');
+    }
+
+    async function mergePdfFiles() {
+        if (pdfMergeFiles.length < 2) {
+            showToast('Add at least two PDFs before merging.', 'warning');
+            return;
+        }
+
+        const outputFolder = getPdfMergeFolder();
+        if (!outputFolder) {
+            showToast('Choose an output folder first.', 'warning');
+            return;
+        }
+
+        pdfMergeBtn.disabled = true;
+        const originalLabel = pdfMergeBtn.innerHTML;
+        pdfMergeBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Merging PDFs';
+
+        try {
+            const result = await window.app?.mergePDFs?.({
+                pdfPaths: pdfMergeFiles.map((file) => file.path),
+                outputFolder,
+                pdfName: pdfMergeOutputName?.value || 'Merged_PDF'
+            });
+
+            if (result?.success) {
+                showToast(`Merged ${result.pageCount || ''} pages into ${result.fileName || 'Merged_PDF.pdf'}`, 'success');
+                addRecentFile(result.fileName || 'Merged_PDF.pdf', 'pdf', result.outputPath);
+                if (appSettings.openFolderOnComplete && result.outputPath) {
+                    await window.app?.openFolder?.(getFolderFromPath(result.outputPath));
+                }
+                clearPdfMergeFiles();
+            } else {
+                showToast(result?.error || 'Failed to merge PDFs.', 'error', 6000);
+            }
+        } catch (error) {
+            showToast(error?.message || 'Failed to merge PDFs.', 'error', 6000);
+        } finally {
+            pdfMergeBtn.innerHTML = originalLabel;
+            updatePdfButtons();
+        }
     }
 
     async function extractPdfImages() {
@@ -2305,7 +2486,11 @@
         if (pdfExtractFolderInput && !pdfExtractFolderInput.value) {
             pdfExtractFolderInput.value = appSettings.defaultOutputFolder || defaultDownloadsPath || '';
         }
+        if (pdfMergeFolderInput && !pdfMergeFolderInput.value) {
+            pdfMergeFolderInput.value = appSettings.defaultOutputFolder || defaultDownloadsPath || '';
+        }
         renderPdfImageList();
+        renderPdfMergeList();
         clearPdfExtractFile();
         setPdfMode('img-to-pdf');
         ensureGroupSettings('audio');
@@ -2683,6 +2868,40 @@
     });
     pdfExtractOpenFolderBtn?.addEventListener('click', async () => {
         const folder = getPdfExtractFolder();
+        if (folder) {
+            await window.app?.openFolder?.(folder);
+        }
+    });
+
+    pdfMergeDropzone?.addEventListener('click', () => pdfMergeInput?.click());
+    pdfMergeDropzone?.querySelector('.pdf-browse-btn')?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        pdfMergeInput?.click();
+    });
+    pdfMergeDropzone?.addEventListener('dragover', (event) => {
+        event.preventDefault();
+        pdfMergeDropzone.classList.add('dragover');
+    });
+    pdfMergeDropzone?.addEventListener('dragleave', () => pdfMergeDropzone.classList.remove('dragover'));
+    pdfMergeDropzone?.addEventListener('drop', (event) => {
+        event.preventDefault();
+        pdfMergeDropzone.classList.remove('dragover');
+        addPdfMergeFiles(event.dataTransfer.files);
+    });
+    pdfMergeInput?.addEventListener('change', (event) => {
+        addPdfMergeFiles(event.target.files);
+        event.target.value = '';
+    });
+    pdfMergeClearBtn?.addEventListener('click', clearPdfMergeFiles);
+    pdfMergeBtn?.addEventListener('click', mergePdfFiles);
+    pdfMergePickFolderBtn?.addEventListener('click', async () => {
+        const folder = await window.app?.selectOutputFolder?.();
+        if (folder && pdfMergeFolderInput) {
+            pdfMergeFolderInput.value = folder;
+        }
+    });
+    pdfMergeOpenFolderBtn?.addEventListener('click', async () => {
+        const folder = getPdfMergeFolder();
         if (folder) {
             await window.app?.openFolder?.(folder);
         }
