@@ -131,6 +131,8 @@ function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1200,
         height: 800,
+        minWidth: 950,
+        minHeight: 650,
         frame: true,
         icon: appIconPath,
         backgroundColor: '#0f111a', // Space background color

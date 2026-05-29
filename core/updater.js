@@ -4,6 +4,39 @@ const { autoUpdater } = require('electron-updater');
 // Configure autoUpdater logger
 autoUpdater.logger = console;
 
+function sanitizeUpdateError(err) {
+    if (!err) return 'An unknown error occurred during the update check.';
+    
+    let message = typeof err === 'string' ? err : (err.message || String(err));
+    const lowerMessage = message.toLowerCase();
+    
+    if (lowerMessage.includes('latest.yml') && lowerMessage.includes('404')) {
+        return 'Update check failed: No published updates found (404). This usually means no releases have been published yet, or the repository is private.';
+    }
+    
+    if (lowerMessage.includes('enotfound') || lowerMessage.includes('etimedout') || lowerMessage.includes('fetch failed') || lowerMessage.includes('network')) {
+        return 'Network connection failed. Unable to reach the update server. Please check your internet connection.';
+    }
+    
+    if (lowerMessage.includes('auth') || lowerMessage.includes('token') || lowerMessage.includes('401') || lowerMessage.includes('403')) {
+        return 'Authentication failed. Please verify your repository permissions or configuration.';
+    }
+    
+    if (message.includes('HttpError:')) {
+        const parts = message.split('HttpError:');
+        const mainMessage = parts[0].trim();
+        const codeMatch = parts[1].match(/\b\d{3}\b/);
+        const code = codeMatch ? ` (${codeMatch[0]})` : '';
+        return `${mainMessage.replace(/\(?https?:\/\/[^\s\)]+\)?/g, '').trim()}${code}`.trim() || 'HTTP error occurred during update check.';
+    }
+    
+    const firstLine = message.split('\n')[0].trim();
+    if (firstLine.length > 150) {
+        return firstLine.substring(0, 150) + '...';
+    }
+    return firstLine;
+}
+
 function initUpdater(mainWindow) {
     // Disable auto-download by default to give users control over bandwidth
     autoUpdater.autoDownload = false;
@@ -41,7 +74,7 @@ function initUpdater(mainWindow) {
     autoUpdater.on('error', (err) => {
         console.error('[updater] Error during update check:', err);
         sendUpdateStatus('error', {
-            message: err.message || String(err)
+            message: sanitizeUpdateError(err)
         });
     });
 
@@ -80,8 +113,9 @@ function initUpdater(mainWindow) {
             return { success: true, result };
         } catch (error) {
             console.error('[updater:check] Error:', error);
-            sendUpdateStatus('error', { message: error.message });
-            return { success: false, error: error.message };
+            const cleanMessage = sanitizeUpdateError(error);
+            sendUpdateStatus('error', { message: cleanMessage });
+            return { success: false, error: cleanMessage };
         }
     });
 
@@ -121,8 +155,9 @@ function initUpdater(mainWindow) {
             return { success: true };
         } catch (error) {
             console.error('[updater:download] Error:', error);
-            sendUpdateStatus('error', { message: error.message });
-            return { success: false, error: error.message };
+            const cleanMessage = sanitizeUpdateError(error);
+            sendUpdateStatus('error', { message: cleanMessage });
+            return { success: false, error: cleanMessage };
         }
     });
 
