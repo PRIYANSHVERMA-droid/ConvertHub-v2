@@ -316,7 +316,7 @@
 
     let FORMAT_MAP = {
         audio: ['mp3', 'wav', 'aac', 'flac', 'ogg', 'wma', 'm4a'],
-        video: ['mp4', 'avi', 'mkv', 'mov', 'webm', 'flv', 'wmv', 'gif'],
+        video: ['mp4', 'avi', 'mkv', 'mov', 'webm', 'flv', 'wmv'],
         image: ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'tiff', 'ico', 'gif'],
         document: ['pdf', 'docx', 'txt', 'odt', 'rtf', 'html', 'xlsx', 'pptx'],
         archive: ['zip', '7z', 'tar', 'gz']
@@ -351,9 +351,7 @@
         video: [
             { id: 'video-balanced-mp4', label: 'Balanced MP4', type: 'video', format: 'mp4', quality: 75, isDefault: true },
             { id: 'video-high-mp4', label: 'High Quality MP4', type: 'video', format: 'mp4', quality: 92 },
-            { id: 'video-webm-web', label: 'WebM for Web', type: 'video', format: 'webm', quality: 72 },
-            { id: 'video-gif-anim', label: 'Animated GIF (640px, 15fps)', type: 'video', format: 'gif', quality: 80 },
-            { id: 'video-gif-hd', label: 'High Quality GIF (Full Res, 24fps)', type: 'video', format: 'gif', quality: 95 }
+            { id: 'video-webm-web', label: 'WebM for Web', type: 'video', format: 'webm', quality: 72 }
         ],
         image: [
             { id: 'image-jpeg-balanced', label: 'JPEG Balanced', type: 'image', format: 'jpg', quality: 78, isDefault: true },
@@ -510,9 +508,6 @@
             return null;
         }
         const ext = rawName.slice(dotIndex + 1).toLowerCase();
-        if (ext === 'gif') {
-            return 'image';
-        }
         for (const [type, formats] of Object.entries(FORMAT_MAP)) {
             if (formats.includes(ext)) {
                 return type;

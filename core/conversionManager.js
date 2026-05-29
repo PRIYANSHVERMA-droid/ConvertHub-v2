@@ -53,7 +53,7 @@ const resolvedEngineExecutables = new Map();
 
 const FORMAT_TYPES = {
     audio: ['mp3', 'wav', 'aac', 'flac', 'ogg', 'wma', 'm4a'],
-    video: ['mp4', 'avi', 'mkv', 'mov', 'webm', 'flv', 'wmv', 'gif'],
+    video: ['mp4', 'avi', 'mkv', 'mov', 'webm', 'flv', 'wmv'],
     image: ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'tiff', 'ico', 'gif'],
     document: ['pdf', 'docx', 'txt', 'odt', 'rtf', 'html', 'xlsx', 'pptx'],
     archive: ['zip', '7z', 'tar', 'gz']
@@ -423,6 +423,199 @@ function getBatchWorkerLimit(jobCount) {
     return Math.max(1, Math.min(DEFAULT_BATCH_WORKER_LIMIT, jobCount));
 }
 
+function detectTypeFromExtension(ext) {
+    const normalized = normalizeFormat(ext);
+    for (const [type, formats] of Object.entries(FORMAT_TYPES)) {
+        if (formats.includes(normalized)) {
+            return type;
+        }
+    }
+    return null;
+}
+
+async function validateRequest({ inputPath, outputPath, format, type }) {
+    if (!inputPath || typeof inputPath !== 'string') {
+        throw new Error('Missing input file path.');
+    }
+    if (!outputPath || typeof outputPath !== 'string') {
+        throw new Error('Missing output file path.');
+    }
+    if (!path.isAbsolute(inputPath)) {
+        throw new Error('Input path must be absolute.');
+    }
+    if (!path.isAbsolute(outputPath)) {
+        throw new Error('Output path must be absolute.');
+    }
+    if (!await pathExists(inputPath)) {
+        throw new Error(`Input file does not exist: ${inputPath}`);
+    }
+
+    const stats = await fs.promises.stat(inputPath);
+    if (!stats.isFile()) {
+        throw new Error(`Input path is not a file: ${inputPath}`);
+    }
+
+    const normalizedFormat = normalizeFormat(format);
+    if (!normalizedFormat) {
+        throw new Error('Missing output format.');
+    }
+
+    if (type && (!FORMAT_TYPES[type] || !FORMAT_TYPES[type].includes(normalizedFormat))) {
+        throw new Error(`Format .${normalizedFormat} is not supported for type "${type}".`);
+    }
+
+    const normalizedInput = path.normalize(inputPath).toLowerCase();
+    const normalizedOutput = path.normalize(outputPath).toLowerCase();
+    if (normalizedInput === normalizedOutput) {
+        throw new Error('Output file cannot overwrite the input file.');
+    }
+
+    await ensureDirectoryExists(path.dirname(outputPath));
+
+    return normalizedFormat;
+}
+
+async function createUniqueOutputPath(desiredPath, reservedPaths = new Set()) {
+    const parsed = splitOutputPath(desiredPath);
+    const ext = parsed.ext || '';
+    const baseDir = parsed.dir;
+    const baseName = parsed.name || 'output';
+    let attempt = 0;
+    let candidate = desiredPath;
+
+    while (true) {
+        const normalizedCandidate = normalizeOutputKey(candidate);
+        if (!reservedPaths.has(normalizedCandidate) && !await pathExists(candidate)) {
+            reservedPaths.add(normalizedCandidate);
+            return candidate;
+        }
+
+        attempt += 1;
+        candidate = path.join(baseDir, `${baseName} (${attempt})${ext}`);
+    }
+}
+
+function simplifyEngineError(errorMessage, { engine, inputPath, format } = {}) {
+    const raw = String(errorMessage || '').trim();
+    const fileName = formatDisplayName(inputPath);
+    const normalized = raw.toLowerCase();
+
+    if (!raw) {
+        return `The ${engine || 'conversion'} process failed for ${fileName}.`;
+    }
+
+    if (normalized.includes('permission denied') || normalized.includes('access is denied')) {
+        return `ConvertHub could not write the output for ${fileName}. Try a different output folder or close any app using that file.`;
+    }
+
+    if (normalized.includes('invalid data found') || normalized.includes('could not find codec parameters')) {
+        return `${fileName} appears to be unreadable or damaged, so it could not be converted to ${String(format || '').toUpperCase()}.`;
+    }
+
+    if (normalized.includes('moov atom not found') || normalized.includes('invalid argument')) {
+        return `${fileName} uses an unsupported or damaged source format for this conversion.`;
+    }
+
+    if (normalized.includes('password') && normalized.includes('protected')) {
+        return `${fileName} is password-protected, so ConvertHub could not open it automatically.`;
+    }
+
+    if (normalized.includes('source file could not be loaded') || normalized.includes('general input/output error')) {
+        return `ConvertHub could not read ${fileName}. Make sure the file still exists and is not open in another app.`;
+    }
+
+    if (normalized.includes('not found at:')) {
+        return `The required ${engine || 'conversion'} engine is not installed on this system yet.`;
+    }
+
+    return raw;
+}
+
+function parseDuration(str) {
+    if (!str.includes('Duration:')) return 0;
+    const match = str.match(/Duration:\s*(\d{2}):(\d{2}):(\d{2})\.(\d{2})/);
+    if (!match) return 0;
+    return parseInt(match[1], 10) * 3600
+        + parseInt(match[2], 10) * 60
+        + parseInt(match[3], 10)
+        + parseInt(match[4], 10) / 100;
+}
+
+function parseTime(str) {
+    if (!str.includes('time=')) return 0;
+    const match = str.match(/time=(\d{2}):(\d{2}):(\d{2})\.(\d{2})/);
+    if (!match) return 0;
+    return parseInt(match[1], 10) * 3600
+        + parseInt(match[2], 10) * 60
+        + parseInt(match[3], 10)
+        + parseInt(match[4], 10) / 100;
+}
+
+function getQualityArgs(type, quality, format) {
+    const q = Math.min(100, Math.max(1, parseInt(quality, 10) || 80));
+
+    if (type === 'audio') {
+        const bitrate = Math.round(64 + (q / 100) * (320 - 64));
+        return ['-b:a', `${bitrate}k`];
+    }
+
+    if (type === 'video') {
+        const crf = Math.round(28 - (q / 100) * 10);
+        return ['-crf', `${crf}`];
+    }
+
+    if (type === 'image') {
+        if (format === 'jpg' || format === 'jpeg') {
+            const qscale = Math.round(31 - (q / 100) * 29);
+            return ['-qscale:v', `${qscale}`];
+        }
+        if (format === 'webp') {
+            return ['-quality', `${q}`];
+        }
+    }
+
+    return [];
+}
+
+function getVideoQualityArgsForEncoder(encoder, quality) {
+    const q = Math.min(100, Math.max(1, parseInt(quality, 10) || 80));
+    const cq = Math.round(35 - (q / 100) * 17);
+    const bitrate = Math.round(1500 + (q / 100) * 6500);
+
+    switch (encoder) {
+        case 'h264_nvenc':
+            return ['-preset', 'p5', '-rc', 'vbr', '-cq', `${cq}`, '-b:v', '0'];
+        case 'h264_qsv':
+            return ['-global_quality', `${cq}`];
+        case 'h264_amf':
+        case 'h264_mf':
+            return ['-b:v', `${bitrate}k`];
+        case 'vp9_qsv':
+        case 'av1_qsv':
+            return ['-global_quality', `${cq}`];
+        case 'av1_nvenc':
+            return ['-preset', 'p5', '-cq', `${cq}`, '-b:v', '0'];
+        case 'av1_amf':
+        case 'av1_mf':
+            return ['-b:v', `${bitrate}k`];
+        default:
+            return ['-crf', `${Math.round(28 - (q / 100) * 10)}`];
+    }
+}
+
+function getImageQualityArgsForEncoder(encoder, quality) {
+    const q = Math.min(100, Math.max(1, parseInt(quality, 10) || 80));
+
+    switch (encoder) {
+        case 'mjpeg_qsv': {
+            const globalQuality = Math.round(1 + ((100 - q) / 100) * 30);
+            return ['-global_quality', `${globalQuality}`];
+        }
+        default:
+            return getQualityArgs('image', quality, 'jpg');
+    }
+}
+
 function getFFmpegCodecArgs(type, format) {
     if (type === 'audio') {
         switch (format) {
@@ -459,8 +652,6 @@ function getFFmpegCodecArgs(type, format) {
                 return ['-c:v', 'wmv2', '-c:a', 'wmav2'];
             case 'flv':
                 return ['-c:v', 'flv', '-c:a', 'libmp3lame'];
-            case 'gif':
-                return ['-c:v', 'gif', '-an'];
             default:
                 return [];
         }
