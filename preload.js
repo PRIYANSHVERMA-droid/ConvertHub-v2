@@ -100,9 +100,36 @@ contextBridge.exposeInMainWorld('app', {
     // Shell
     openFolder: (folderPath) => ipcRenderer.invoke('open-folder', folderPath),
     openPath: (targetPath) => ipcRenderer.invoke('open:path', targetPath),
-    pathExists: (data) => ipcRenderer.invoke('path-exists', data),
+    pathExists: (filePath) => ipcRenderer.invoke('path-exists', { path: filePath }),
     deleteFile: (filePath) => ipcRenderer.invoke('delete-file', { filePath }),
     getFileSize: (filePath) => ipcRenderer.invoke('get-file-size', { filePath }),
+
+    // History IPC
+    getHistory: () => ipcRenderer.invoke('get-history'),
+    clearHistory: () => ipcRenderer.invoke('clear-history'),
+
+    // Presets IPC
+    getPresets: () => ipcRenderer.invoke('get-presets'),
+    savePreset: (type, preset) => ipcRenderer.invoke('save-preset', { type, preset }),
+    deletePreset: (type, presetId) => ipcRenderer.invoke('delete-preset', { type, presetId }),
+
+    // Theme IPC
+    getSystemTheme: () => ipcRenderer.invoke('get-system-theme'),
+    onSystemThemeUpdated: (callback) => {
+        ipcRenderer.on('system-theme-updated', (_event, theme) => callback(theme));
+    },
+
+    // Notifications IPC
+    setNotificationsEnabled: (enabled) => ipcRenderer.invoke('set-notifications-enabled', enabled),
+    onConversionCompleteFocused: (callback) => {
+        ipcRenderer.on('conversion-complete-focused', (_event, record) => callback(record));
+    },
+    onConversionCompleteBackground: (callback) => {
+        ipcRenderer.on('conversion-complete-background', (_event, record) => callback(record));
+    },
+
+    // Image Toolkit IPC
+    processImage: (payload) => ipcRenderer.invoke('process-image', payload),
 
     // Window controls
     minimize: async () => {

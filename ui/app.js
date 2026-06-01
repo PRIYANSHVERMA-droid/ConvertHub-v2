@@ -106,16 +106,26 @@
     const clearRecentBtn = document.getElementById('clear-recent-btn');
     const outputScopeLabel = document.getElementById('output-scope-label');
     const resetFileOverrideBtn = document.getElementById('reset-file-override-btn');
+
+    // v2.2 New Elements
+    const savePresetBtn = document.getElementById('save-preset-btn');
+    const presetSaveInputGroup = document.getElementById('preset-save-input-group');
+    const newPresetNameInput = document.getElementById('new-preset-name');
+    const confirmSavePresetBtn = document.getElementById('confirm-save-preset');
+    const cancelSavePresetBtn = document.getElementById('cancel-save-preset');
+    const deletePresetBtn = document.getElementById('delete-preset-btn');
+    const notificationBadge = document.getElementById('notification-badge');
+    const launchImageBtn = document.getElementById('launch-image-btn');
+
+    let customPresets = {};
     const batchStatus = document.getElementById('batch-status');
+    const themeToggle = document.getElementById('theme-toggle');
+    const settingsToggle = document.getElementById('settings-toggle');
+    const settingsOverlay = document.getElementById('settings-overlay');
+    const settingsClose = document.getElementById('settings-close');
     const batchStatusTitle = document.getElementById('batch-status-title');
     const batchStatusMeta = document.getElementById('batch-status-meta');
     const batchProgressFill = document.getElementById('batch-progress-fill');
-    const themeToggle = document.getElementById('theme-toggle');
-    const settingsToggle = document.getElementById('settings-toggle');
-    const notificationsToggle = document.getElementById('notifications-toggle');
-    const notificationBadge = document.getElementById('notification-badge');
-    const settingsOverlay = document.getElementById('settings-overlay');
-    const settingsClose = document.getElementById('settings-close');
     const settingsSave = document.getElementById('settings-save');
     const settingsReset = document.getElementById('settings-reset');
     const settingsTheme = document.getElementById('settings-theme');
@@ -144,6 +154,7 @@
     const updaterProgressFill = document.getElementById('updater-progress-fill');
     const settingsAutoCheckUpdates = document.getElementById('settings-auto-check-updates');
     const settingsAutoDownloadUpdates = document.getElementById('settings-auto-download-updates');
+    const notificationsToggle = document.getElementById('notifications-toggle');
     const notificationsOverlay = document.getElementById('notifications-overlay');
     const notificationsClose = document.getElementById('notifications-close');
     const notificationsMarkRead = document.getElementById('notifications-mark-read');
@@ -155,12 +166,13 @@
     const launchpadWorkspace = document.getElementById('launchpad-workspace');
     const converterWorkspace = document.getElementById('converter-workspace');
     const pdfWorkspace = document.getElementById('pdf-workspace');
+    const imageToolkitWorkspace = document.getElementById('image-toolkit-workspace');
     const headerHomeBtn = document.getElementById('header-home-btn');
     const launchConverterBtn = document.getElementById('launch-converter-btn');
     const launchPdfBtn = document.getElementById('launch-pdf-btn');
     const bypassLaunchpadCheckbox = document.getElementById('bypass-launchpad-checkbox');
 
-    const pdfTabs = Array.from(document.querySelectorAll('.pdf-tab'));
+    const pdfTabs = Array.from(document.querySelectorAll('#pdf-workspace .pdf-tab'));
     const pdfImgPanel = document.getElementById('panel-img-to-pdf');
     const pdfExtractPanel = document.getElementById('panel-pdf-to-img');
     const pdfMergePanel = document.getElementById('panel-merge-pdf');
@@ -479,8 +491,19 @@
         return type === 'audio' || type === 'video' || type === 'image';
     }
 
+    async function loadCustomPresets() {
+        if (!window.app?.getPresets) return;
+        try {
+            customPresets = await window.app.getPresets();
+        } catch (err) {
+            console.error('[renderer] Failed to load custom presets:', err);
+        }
+    }
+
     function getPresetsForType(type) {
-        return PRESET_CATALOG[type] || [];
+        const builtIn = PRESET_CATALOG[type] || [];
+        const custom = (customPresets && customPresets[type]) || [];
+        return [...builtIn, ...custom];
     }
 
     function getDefaultPreset(type) {
@@ -586,14 +609,22 @@
         return ICON_MAP.unknown;
     }
 
-    function applyTheme(theme) {
-        const normalizedTheme = theme === 'light' ? 'light' : 'dark';
+    async function applyTheme(theme) {
+        let actualTheme = theme;
+        if (theme === 'auto' && window.app?.getSystemTheme) {
+            actualTheme = await window.app.getSystemTheme();
+        }
+        
+        const normalizedTheme = actualTheme === 'light' ? 'light' : 'dark';
         document.body.setAttribute('data-theme', normalizedTheme);
         themeToggle.innerHTML = normalizedTheme === 'light'
             ? '<i class="fa-solid fa-sun"></i>'
             : '<i class="fa-solid fa-moon"></i>';
-        settingsTheme.value = normalizedTheme;
-        appSettings.theme = normalizedTheme;
+        
+        if (settingsTheme) {
+            settingsTheme.value = theme;
+        }
+        appSettings.theme = theme;
         window.app?.setTitlebarTheme?.(normalizedTheme);
     }
 
@@ -880,41 +911,82 @@
         loadRecentFiles();
     }
 
-    function loadRecentFiles() {
-        const recents = getRecentFiles();
-        recentList.innerHTML = '';
-        if (recents.length === 0) {
-            recentList.innerHTML = '<p class="no-recents">No recent conversions</p>';
-            return;
-        }
-        recents.forEach((item) => {
-            const iconInfo = getIconForFormat(String(item.format || '').toLowerCase());
-            const div = document.createElement('div');
-            div.className = 'recent-item slide-in';
-            div.innerHTML = `
-                <div class="recent-icon ${iconInfo.class}"><i class="fa-regular ${iconInfo.icon}"></i></div>
-                <div class="recent-info">
-                    <span class="recent-name" title="${item.name}">${truncateName(item.name, 22)}</span>
-                    <span class="recent-meta">→ ${item.format} • ${item.time}</span>
-                </div>
-                <div class="recent-actions">
-                    <button class="recent-action-btn" title="Open file"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
-                    <button class="recent-action-btn" title="Show in folder"><i class="fa-regular fa-folder-open"></i></button>
-                </div>
-                <i class="fa-regular fa-circle-check success-icon pulse-anim"></i>
-            `;
-            if (item.outputPath && window.app) {
-                div.querySelector('.recent-action-btn:first-child').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    window.app.openPath(item.outputPath);
-                });
-                div.querySelector('.recent-action-btn:last-child').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    window.app.openFolder(getFolderFromPath(item.outputPath));
-                });
+    async function loadRecentFiles() {
+        if (!window.app?.getHistory) return;
+        try {
+            const recents = await window.app.getHistory();
+            recentList.innerHTML = '';
+            if (!recents || recents.length === 0) {
+                recentList.innerHTML = '<p class="no-recents">No recent conversions</p>';
+                return;
             }
-            recentList.appendChild(div);
-        });
+            // Show 10 most recent
+            recents.slice(0, 10).forEach((item) => {
+                const format = (item.outputFormat || 'unk').toLowerCase();
+                const iconInfo = getIconForFormat(format);
+                const div = document.createElement('div');
+                div.className = 'recent-item slide-in';
+                const timeStr = new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                div.innerHTML = `
+                    <div class="recent-icon ${iconInfo.class}"><i class="fa-regular ${iconInfo.icon}"></i></div>
+                    <div class="recent-info">
+                        <span class="recent-name" title="${item.inputFiles[0]?.name || 'File'}">${truncateName(item.inputFiles[0]?.name || 'File', 22)}</span>
+                        <span class="recent-meta">→ ${item.outputFormat.toUpperCase()} • ${timeStr}</span>
+                    </div>
+                    <div class="recent-actions">
+                        <button class="recent-action-btn rerun-btn" title="Re-run conversion"><i class="fa-solid fa-rotate-right"></i></button>
+                        <button class="recent-action-btn open-file-btn" title="Open file"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
+                        <button class="recent-action-btn open-folder-btn" title="Show in folder"><i class="fa-regular fa-folder-open"></i></button>
+                    </div>
+                    <i class="fa-regular fa-circle-check success-icon pulse-anim"></i>
+                `;
+                
+                if (item.outputPath && window.app) {
+                    div.querySelector('.rerun-btn').addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        // Check if files exist
+                        const validFiles = [];
+                        for (const f of item.inputFiles) {
+                            const exists = await window.app.pathExists({ path: f.path });
+                            if (exists) validFiles.push({ name: f.name, path: f.path, size: f.size });
+                        }
+
+                        if (validFiles.length === 0) {
+                            showToast('Original files not found on disk.', 'warning');
+                            return;
+                        }
+
+                        // Switch to converter and add to queue
+                        switchWorkspace('converter');
+                        addFilesToQueue(validFiles);
+                        
+                        // Apply settings
+                        const type = item.conversionType || detectTypeFromFileName(validFiles[0]);
+                        if (type) {
+                            selectedScope = { kind: 'group', type };
+                            const group = ensureGroupSettings(type);
+                            group.format = item.outputFormat;
+                            group.quality = item.quality;
+                            group.outputFolder = getFolderFromPath(item.outputPath);
+                            syncSidebarFromScope();
+                        }
+                        showToast('Job restored to queue.', 'success');
+                    });
+                    div.querySelector('.open-file-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        window.app.openPath(item.outputPath);
+                    });
+                    div.querySelector('.open-folder-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        window.app.openFolder(getFolderFromPath(item.outputPath));
+                    });
+                }
+                recentList.appendChild(div);
+            });
+        } catch (err) {
+            console.error('[renderer] Failed to load history:', err);
+            recentList.innerHTML = '<p class="no-recents">Failed to load history</p>';
+        }
     }
 
     function buildOutputPath(inputPath, format, resolvedOutputFolder) {
@@ -979,17 +1051,28 @@
 
     function syncPresetSelectionFromControls(type, format, quality) {
         const matchingPreset = getMatchingPreset(type, format, quality);
-        const customOption = presetSelect.querySelector('option[value="__custom__"]');
-        if (!matchingPreset && !customOption) {
-            const option = document.createElement('option');
-            option.value = '__custom__';
-            option.textContent = 'Custom';
-            presetSelect.appendChild(option);
+        const builtIn = PRESET_CATALOG[type] || [];
+        const isBuiltIn = builtIn.some(p => p.id === matchingPreset?.id);
+        const isCustom = matchingPreset && matchingPreset.isCustom;
+
+        if (matchingPreset) {
+            presetSelect.value = matchingPreset.id;
+            savePresetBtn?.classList.toggle('hidden', isBuiltIn);
+            deletePresetBtn?.classList.toggle('hidden', !isCustom);
+            const customOption = presetSelect.querySelector('option[value="__custom__"]');
+            if (customOption) customOption.remove();
+        } else {
+            let customOption = presetSelect.querySelector('option[value="__custom__"]');
+            if (!customOption) {
+                customOption = document.createElement('option');
+                customOption.value = '__custom__';
+                customOption.textContent = 'Custom';
+                presetSelect.appendChild(customOption);
+            }
+            presetSelect.value = '__custom__';
+            savePresetBtn?.classList.remove('hidden');
+            deletePresetBtn?.classList.add('hidden');
         }
-        if (matchingPreset && customOption) {
-            customOption.remove();
-        }
-        presetSelect.value = matchingPreset ? matchingPreset.id : '__custom__';
     }
 
     function syncSidebarFromScope() {
@@ -2729,26 +2812,37 @@
     }
 
     function switchWorkspace(target) {
-        if (!launchpadWorkspace || !converterWorkspace || !pdfWorkspace || !headerHomeBtn) {
+        if (!launchpadWorkspace || !converterWorkspace || !pdfWorkspace || !imageToolkitWorkspace || !headerHomeBtn) {
             return;
         }
 
         if (target === 'converter') {
             launchpadWorkspace.classList.add('hidden');
             pdfWorkspace.classList.add('hidden');
+            imageToolkitWorkspace.classList.add('hidden');
             converterWorkspace.classList.remove('hidden');
             headerHomeBtn.classList.remove('hidden');
             localStorage.setItem('converthub_last_workspace', 'converter');
         } else if (target === 'pdf') {
             launchpadWorkspace.classList.add('hidden');
             converterWorkspace.classList.add('hidden');
+            imageToolkitWorkspace.classList.add('hidden');
+            setPdfMode('img-to-pdf');
             pdfWorkspace.classList.remove('hidden');
             headerHomeBtn.classList.remove('hidden');
             localStorage.setItem('converthub_last_workspace', 'pdf');
+        } else if (target === 'image-toolkit') {
+            launchpadWorkspace.classList.add('hidden');
+            converterWorkspace.classList.add('hidden');
+            pdfWorkspace.classList.add('hidden');
+            imageToolkitWorkspace.classList.remove('hidden');
+            headerHomeBtn.classList.remove('hidden');
+            localStorage.setItem('converthub_last_workspace', 'image-toolkit');
         } else {
             // launchpad
             converterWorkspace.classList.add('hidden');
             pdfWorkspace.classList.add('hidden');
+            imageToolkitWorkspace.classList.add('hidden');
             launchpadWorkspace.classList.remove('hidden');
             headerHomeBtn.classList.add('hidden');
         }
@@ -2835,6 +2929,32 @@
             .map(([name]) => name);
         if (missingEngines.length > 0) {
             showToast(`Some converters are unavailable on this ${getPlatformLabel(engineStatus?.platform)} setup: ${missingEngines.join(', ')}`, 'warning', 6000, { skipNotification: true });
+        }
+
+        if (window.app?.onSystemThemeUpdated) {
+            window.app.onSystemThemeUpdated((theme) => {
+                if (appSettings.theme === 'auto') {
+                    applyTheme('auto');
+                }
+            });
+        }
+
+        if (window.app?.onConversionCompleteFocused) {
+            window.app.onConversionCompleteFocused((record) => {
+                loadRecentFiles();
+            });
+        }
+
+        if (window.app?.onConversionCompleteBackground) {
+            window.app.onConversionCompleteBackground((record) => {
+                loadRecentFiles();
+                // Add an in-app notification too
+                addNotification(
+                    'Conversion Complete',
+                    `${record.inputFiles[0]?.name || 'File'} converted to ${record.outputFormat.toUpperCase()}`,
+                    'success'
+                );
+            });
         }
 
         if (window.app && window.app.onProgress) {
@@ -4346,6 +4466,182 @@
     }
 
 
+    // ─── Image Toolkit Controller ──────────────────────────────────────────
+    let imageToolkitFiles = [];
+    let imageToolkitMode = 'image-resize';
+
+    const imageTabs = Array.from(document.querySelectorAll('#image-toolkit-workspace .pdf-tab'));
+    const imagePanels = {
+        'image-resize': document.getElementById('panel-image-resize'),
+        'image-compress': document.getElementById('panel-image-compress'),
+        'image-watermark': document.getElementById('panel-image-watermark'),
+        'image-convert': document.getElementById('panel-image-convert')
+    };
+    const imageSidebars = {
+        'image-resize': document.getElementById('sidebar-image-resize'),
+        'image-compress': document.getElementById('sidebar-image-compress'),
+        'image-watermark': document.getElementById('sidebar-image-watermark'),
+        'image-convert': document.getElementById('sidebar-image-convert')
+    };
+
+    function setImageToolkitMode(mode) {
+        imageToolkitMode = mode;
+        imageTabs.forEach(tab => tab.classList.toggle('active', tab.dataset.mode === mode));
+        Object.keys(imagePanels).forEach(m => imagePanels[m]?.classList.toggle('hidden', m !== mode));
+        Object.keys(imageSidebars).forEach(m => imageSidebars[m]?.classList.toggle('hidden', m !== mode));
+        updateImageToolkitButtons();
+    }
+
+    function updateImageToolkitButtons() {
+        const hasFiles = imageToolkitFiles.length > 0;
+        document.getElementById('image-process-resize-btn').disabled = !hasFiles || imageToolkitMode !== 'image-resize';
+        document.getElementById('image-process-compress-btn').disabled = !hasFiles || imageToolkitMode !== 'image-compress';
+        document.getElementById('image-process-watermark-btn').disabled = !hasFiles || imageToolkitMode !== 'image-watermark';
+        document.getElementById('image-process-convert-btn').disabled = !hasFiles || imageToolkitMode !== 'image-convert';
+    }
+
+    async function addImageToolkitFiles(files) {
+        const allowed = new Set(['jpg', 'jpeg', 'png', 'webp', 'avif', 'gif']);
+        const newFiles = Array.from(files).map(file => ({
+            name: file.name,
+            path: file.path || (window.app?.getPathForFile ? window.app.getPathForFile(file) : ''),
+            size: file.size,
+            type: file.type
+        })).filter(f => allowed.has(f.name.split('.').pop().toLowerCase()));
+
+        if (newFiles.length === 0) {
+            showToast('Please select valid image files (JPG, PNG, WebP, AVIF, GIF).', 'warning');
+            return;
+        }
+
+        imageToolkitFiles = [...imageToolkitFiles, ...newFiles];
+        renderImageToolkitGrid();
+        
+        if (imageToolkitFiles.length > 0 && !document.getElementById('image-output-folder-input').value) {
+            const dir = getFolderFromPath(imageToolkitFiles[0].path);
+            document.getElementById('image-output-folder-input').value = dir || appSettings.defaultOutputFolder || defaultDownloadsPath || '';
+        }
+        
+        showToast(`${newFiles.length} image(s) added to toolkit.`, 'info');
+    }
+
+    function renderImageToolkitGrid() {
+        const modes = ['resize', 'compress', 'watermark', 'convert'];
+        modes.forEach(mode => {
+            const grid = document.getElementById(`image-${mode}-grid`);
+            const section = document.getElementById(`image-${mode}-grid-section`);
+            const dropzone = document.getElementById(`image-${mode}-dropzone`);
+            const countEl = document.getElementById(`image-${mode}-count`);
+
+            if (!grid || !section || !dropzone) return;
+
+            if (imageToolkitFiles.length === 0) {
+                section.classList.add('hidden');
+                dropzone.classList.remove('hidden');
+            } else {
+                dropzone.classList.add('hidden');
+                section.classList.remove('hidden');
+                countEl.textContent = `${imageToolkitFiles.length} Image(s) Selected`;
+                
+                grid.innerHTML = '';
+                imageToolkitFiles.forEach((file, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'pdf-thumb-card no-drag';
+                    const safeName = escapeHtml(file.name);
+                    const previewUrl = `converthub-media://local-file/?path=${encodeURIComponent(file.path)}`;
+                    
+                    card.innerHTML = `
+                        <div class="thumb-preview-wrap"><img src="${previewUrl}" alt="${safeName}"></div>
+                        <div class="thumb-copy">
+                            <div class="thumb-title" title="${safeName}">${safeName}</div>
+                            <div class="thumb-meta">${formatBytes(file.size)}</div>
+                        </div>
+                        <button class="thumb-act-btn remove-btn" title="Remove image"><i class="fa-solid fa-xmark"></i></button>
+                    `;
+                    
+                    card.querySelector('.remove-btn').addEventListener('click', () => {
+                        imageToolkitFiles.splice(index, 1);
+                        renderImageToolkitGrid();
+                    });
+                    
+                    grid.appendChild(card);
+                });
+            }
+        });
+        updateImageToolkitButtons();
+    }
+
+    function clearImageToolkitFiles() {
+        imageToolkitFiles = [];
+        renderImageToolkitGrid();
+    }
+
+    async function processImageToolkit() {
+        if (imageToolkitFiles.length === 0) return;
+        
+        const outputFolder = document.getElementById('image-output-folder-input').value;
+        if (!outputFolder) {
+            showToast('Please select an output folder.', 'warning');
+            return;
+        }
+
+        const options = {};
+        const format = document.getElementById('image-convert-format').value;
+
+        if (imageToolkitMode === 'image-resize') {
+            options.resize = {
+                width: document.getElementById('image-resize-width').value || null,
+                height: document.getElementById('image-resize-height').value || null,
+                fit: 'inside' // Always maintain aspect if only one dimension given
+            };
+        } else if (imageToolkitMode === 'image-compress') {
+            options.quality = parseInt(document.getElementById('image-compress-quality-slider').value, 10);
+            options.stripMetadata = document.getElementById('image-compress-strip').checked;
+        } else if (imageToolkitMode === 'image-watermark') {
+            options.watermark = {
+                type: 'text',
+                text: document.getElementById('image-watermark-text').value || '© ConvertHub',
+                opacity: parseInt(document.getElementById('image-watermark-opacity-slider').value, 10) / 100
+            };
+        }
+
+        const btnId = `image-process-${imageToolkitMode.split('-')[1]}-btn`;
+        const btn = document.getElementById(btnId);
+        const originalLabel = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+
+        let successCount = 0;
+        try {
+            for (const file of imageToolkitFiles) {
+                const res = await window.app.processImage({
+                    inputPath: file.path,
+                    outputFolder,
+                    options: {
+                        ...options,
+                        format: imageToolkitMode === 'image-convert' ? format : 'original'
+                    }
+                });
+                if (res.success) {
+                    successCount++;
+                    addRecentFile(res.fileName, path.extname(res.outputPath).slice(1), res.outputPath);
+                }
+            }
+            showToast(`Successfully processed ${successCount} image(s).`, 'success');
+            if (appSettings.openFolderOnComplete) {
+                await window.app.openFolder(outputFolder);
+            }
+            clearImageToolkitFiles();
+        } catch (err) {
+            console.error('Image processing failed:', err);
+            showToast(`Processing failed: ${err.message}`, 'error');
+        } finally {
+            btn.innerHTML = originalLabel;
+            btn.disabled = false;
+        }
+    }
+
+
     // ─── Event Listeners Bindings ────────────────────────────────────────────
     
     // PDF Watermark Panel Bindings
@@ -4536,6 +4832,143 @@
         renderOrganizeGrid();
     });
 
+    // v2.2 New Listeners
+    savePresetBtn?.addEventListener('click', () => {
+        presetSaveInputGroup?.classList.remove('hidden');
+        newPresetNameInput?.focus();
+    });
+
+    cancelSavePresetBtn?.addEventListener('click', () => {
+        presetSaveInputGroup?.classList.add('hidden');
+        newPresetNameInput.value = '';
+    });
+
+    confirmSavePresetBtn?.addEventListener('click', async () => {
+        const name = newPresetNameInput?.value.trim();
+        if (!name) {
+            showToast('Please enter a name for the preset.', 'warning');
+            return;
+        }
+
+        const type = getSelectedType();
+        const scope = getScopeSettings();
+        const preset = {
+            id: `custom-${type}-${Date.now()}`,
+            label: name,
+            type: type,
+            format: scope.format,
+            quality: scope.quality,
+            isCustom: true
+        };
+
+        try {
+            const success = await window.app.savePreset(type, preset);
+            if (success) {
+                await loadCustomPresets();
+                presetSaveInputGroup?.classList.add('hidden');
+                newPresetNameInput.value = '';
+                syncSidebarFromScope();
+                showToast(`Preset "${name}" saved!`, 'success');
+            }
+        } catch (err) {
+            console.error('[renderer] Failed to save preset:', err);
+            showToast('Failed to save preset.', 'error');
+        }
+    });
+
+    deletePresetBtn?.addEventListener('click', async () => {
+        const type = getSelectedType();
+        const presetId = presetSelect.value;
+        const preset = getPresetById(type, presetId);
+        
+        if (!preset || !preset.isCustom) return;
+
+        if (confirm(`Are you sure you want to delete the preset "${preset.label}"?`)) {
+            try {
+                const success = await window.app.deletePreset(type, presetId);
+                if (success) {
+                    await loadCustomPresets();
+                    syncSidebarFromScope();
+                    showToast(`Preset "${preset.label}" deleted.`, 'info');
+                }
+            } catch (err) {
+                console.error('[renderer] Failed to delete preset:', err);
+                showToast('Failed to delete preset.', 'error');
+            }
+        }
+    });
+
+    launchImageBtn?.addEventListener('click', () => {
+        switchWorkspace('image-toolkit');
+    });
+
+    // Image Toolkit Tab Bindings
+    imageTabs.forEach(tab => {
+        tab.addEventListener('click', () => setImageToolkitMode(tab.dataset.mode));
+    });
+
+    // Image Toolkit Dropzones & Inputs
+    const imageToolkitDropzones = [
+        { id: 'image-resize-dropzone', input: 'image-resize-input', btn: 'image-resize-browse-btn' },
+        { id: 'image-compress-dropzone', input: 'image-compress-input', btn: 'image-compress-browse-btn' },
+        { id: 'image-watermark-dropzone', input: 'image-watermark-input', btn: 'image-watermark-browse-btn' },
+        { id: 'image-convert-dropzone', input: 'image-convert-input', btn: 'image-convert-browse-btn' }
+    ];
+
+    imageToolkitDropzones.forEach(dz => {
+        const dropzone = document.getElementById(dz.id);
+        const input = document.getElementById(dz.input);
+        const browseBtn = document.getElementById(dz.btn);
+
+        dropzone?.addEventListener('click', () => input?.click());
+        browseBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            input?.click();
+        });
+
+        dropzone?.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('dragover');
+        });
+        dropzone?.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+        dropzone?.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('dragover');
+            addImageToolkitFiles(e.dataTransfer.files);
+        });
+
+        input?.addEventListener('change', (e) => {
+            addImageToolkitFiles(e.target.files);
+            e.target.value = '';
+        });
+    });
+
+    // Image Toolkit Clear Buttons
+    ['resize', 'compress', 'watermark', 'convert'].forEach(mode => {
+        document.getElementById(`image-${mode}-clear-btn`)?.addEventListener('click', clearImageToolkitFiles);
+    });
+
+    // Image Toolkit Process Buttons
+    document.getElementById('image-process-resize-btn')?.addEventListener('click', processImageToolkit);
+    document.getElementById('image-process-compress-btn')?.addEventListener('click', processImageToolkit);
+    document.getElementById('image-process-watermark-btn')?.addEventListener('click', processImageToolkit);
+    document.getElementById('image-process-convert-btn')?.addEventListener('click', processImageToolkit);
+
+    // Image Toolkit Sliders
+    document.getElementById('image-compress-quality-slider')?.addEventListener('input', (e) => {
+        document.getElementById('image-compress-quality-val').textContent = `${e.target.value}%`;
+    });
+    document.getElementById('image-watermark-opacity-slider')?.addEventListener('input', (e) => {
+        document.getElementById('image-watermark-opacity-val').textContent = `${e.target.value}%`;
+    });
+
+    // Image Toolkit Folder Picker
+    document.getElementById('image-pick-folder-btn')?.addEventListener('click', async () => {
+        const folder = await window.app?.selectOutputFolder?.();
+        if (folder) {
+            document.getElementById('image-output-folder-input').value = folder;
+        }
+    });
 
     init();
 }());

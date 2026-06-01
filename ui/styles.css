@@ -3528,6 +3528,567 @@ select.glass-input {
     border-color: rgba(148, 163, 184, 0.18);
 }
 
+/* ==========================================
+   Image Toolkit Reference UI
+   ========================================== */
+#image-toolkit-workspace {
+    overflow: hidden;
+}
+
+#image-toolkit-workspace .pdf-workspace-container {
+    height: 100%;
+    padding: 32px 38px 26px;
+    gap: 24px;
+    background:
+        radial-gradient(circle at 12% 8%, rgba(16, 185, 129, 0.16), transparent 34%),
+        radial-gradient(circle at 78% 32%, rgba(6, 182, 212, 0.12), transparent 32%);
+}
+
+#image-toolkit-workspace .pdf-workspace-header {
+    display: block;
+    border: 0;
+    padding: 0;
+    position: relative;
+}
+
+#image-toolkit-workspace .pdf-header-left h2 {
+    font-size: 28px;
+    line-height: 1;
+    margin: 0 0 12px;
+    letter-spacing: -0.03em;
+}
+
+#image-toolkit-workspace .pdf-header-left p {
+    color: #a8b3cc;
+    font-size: 16px;
+    margin-bottom: 28px;
+}
+
+#image-toolkit-workspace .text-gradient-image {
+    background: linear-gradient(135deg, #10b981, #06b6d4);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+#image-toolkit-workspace .pdf-mode-tabs {
+    width: min(900px, 100%);
+    height: 50px;
+    padding: 0;
+    gap: 0;
+    overflow: hidden;
+    border-radius: 10px;
+    background: rgba(9, 15, 33, 0.56);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+#image-toolkit-workspace .pdf-tab {
+    flex: 1;
+    height: 100%;
+    justify-content: center;
+    border-radius: 0;
+    color: #b5bfd4;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+#image-toolkit-workspace .pdf-tab.active {
+    color: #fff;
+    background: linear-gradient(135deg, #10b981, #0891b2);
+    box-shadow: 0 18px 38px rgba(16, 185, 129, 0.24);
+}
+
+#image-toolkit-workspace .pdf-layout-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 470px;
+    gap: 30px;
+    min-height: 0;
+}
+
+#image-toolkit-workspace .pdf-main-area {
+    padding: 0;
+    gap: 16px;
+    overflow: hidden;
+}
+
+#image-toolkit-workspace .pdf-panel {
+    gap: 16px;
+}
+
+#image-toolkit-workspace .pdf-upload-zone {
+    min-height: 300px;
+    height: 300px;
+    border-radius: 14px;
+    border: 1.5px dashed rgba(148, 163, 184, 0.38);
+    background:
+        radial-gradient(circle at 50% 48%, rgba(16, 185, 129, 0.18), transparent 36%),
+        rgba(13, 20, 42, 0.28);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+#image-toolkit-workspace .pdf-upload-zone:hover,
+#image-toolkit-workspace .pdf-upload-zone.dragover {
+    border-color: rgba(16, 185, 129, 0.9);
+    background:
+        radial-gradient(circle at 50% 48%, rgba(16, 185, 129, 0.26), transparent 40%),
+        rgba(18, 26, 53, 0.46);
+    transform: none;
+}
+
+#image-toolkit-workspace .pdf-drop-icon {
+    width: 62px;
+    height: 62px;
+    margin: 0 auto 20px;
+    display: grid;
+    place-items: center;
+    border-radius: 16px;
+    color: #10b981;
+    font-size: 30px;
+    background: rgba(16, 185, 129, 0.13);
+    border: 1px solid rgba(16, 185, 129, 0.45);
+    box-shadow: 0 0 34px rgba(16, 185, 129, 0.28);
+}
+
+#image-toolkit-workspace .upload-content h3 {
+    font-size: 22px;
+    font-weight: 800;
+    margin-bottom: 10px;
+}
+
+#image-toolkit-workspace .upload-content p {
+    color: #9da8c0;
+    font-size: 16px;
+    margin-bottom: 22px;
+}
+
+#image-toolkit-workspace .pdf-browse-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-width: 210px;
+    height: 46px;
+    border-radius: 8px;
+    color: #f8fafc;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    background: rgba(10, 18, 38, 0.62);
+    border: 1px solid rgba(16, 185, 129, 0.9);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+}
+
+#image-toolkit-workspace .pdf-browse-btn:hover {
+    background: rgba(18, 50, 52, 0.72);
+}
+
+#image-toolkit-workspace .pdf-drop-note {
+    display: block;
+    margin-top: 20px;
+    color: #95a0b8;
+    font-size: 14px;
+}
+
+#image-toolkit-workspace .pdf-drop-note i {
+    margin-right: 8px;
+}
+
+#image-toolkit-workspace .pdf-image-grid-section {
+    height: auto;
+    min-height: 0;
+    border-radius: 14px;
+    overflow: hidden;
+    gap: 0;
+    background: rgba(17, 27, 52, 0.62);
+    border: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+#image-toolkit-workspace .grid-header {
+    padding: 17px 20px;
+}
+
+#image-toolkit-workspace .grid-header h4 {
+    margin: 0;
+    font-size: 16px;
+}
+
+#image-toolkit-workspace .clear-btn {
+    color: #34d399;
+    border: 0;
+    background: transparent;
+    font-weight: 700;
+}
+
+#image-toolkit-workspace .pdf-uploaded-list {
+    display: flex;
+    flex-direction: column;
+    padding: 0 20px 20px;
+    max-height: 360px;
+    overflow-y: auto;
+    gap: 10px;
+}
+
+#image-toolkit-workspace .pdf-thumb-card {
+    min-height: 76px;
+    display: grid;
+    grid-template-columns: 80px minmax(0, 1fr) 38px;
+    align-items: center;
+    gap: 16px;
+    padding: 12px;
+    border-radius: 12px;
+    aspect-ratio: auto;
+    background: rgba(13, 20, 42, 0.42);
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s ease-in-out;
+}
+
+#image-toolkit-workspace .pdf-thumb-card:hover {
+    background: rgba(18, 28, 59, 0.65);
+    border-color: rgba(16, 185, 129, 0.42);
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.12);
+    transform: translateY(-1px);
+}
+
+#image-toolkit-workspace .thumb-preview-wrap {
+    width: 80px;
+    height: 50px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: rgba(5, 10, 24, 0.56);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#image-toolkit-workspace .pdf-thumb-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+#image-toolkit-workspace .thumb-copy {
+    min-width: 0;
+}
+
+#image-toolkit-workspace .thumb-title {
+    margin: 0 0 4px;
+    text-align: left;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#image-toolkit-workspace .thumb-meta {
+    color: #aeb8cf;
+    font-size: 12px;
+}
+
+#image-toolkit-workspace .thumb-act-btn {
+    width: 34px;
+    height: 34px;
+    border: 0;
+    color: #aeb8cf;
+    background: transparent;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+#image-toolkit-workspace .thumb-act-btn:hover {
+    color: #ff6272;
+    background: rgba(244, 63, 94, 0.1);
+    transform: none;
+}
+
+#image-toolkit-workspace .pdf-sidebar {
+    width: auto;
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    border-radius: 14px;
+    overflow: hidden;
+    background:
+        linear-gradient(180deg, rgba(20, 48, 54, 0.72), rgba(13, 32, 42, 0.78)),
+        rgba(12, 18, 34, 0.62);
+    box-shadow: 0 22px 54px rgba(2, 6, 23, 0.28);
+}
+
+#image-toolkit-workspace .pdf-sidebar-section {
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
+    flex: 0 0 auto;
+}
+
+#image-toolkit-workspace .pdf-sidebar-section:not(#sidebar-image-output) {
+    flex: 1 1 auto;
+}
+
+#image-toolkit-workspace .pdf-sidebar-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 22px 10px;
+    user-select: none;
+    flex-shrink: 0;
+}
+
+#image-toolkit-workspace .pdf-sidebar-title h4 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 17px;
+}
+
+#image-toolkit-workspace .pdf-sidebar-title h4 i {
+    color: #10b981;
+}
+
+#image-toolkit-workspace .settings-form-scroll {
+    padding: 0 22px 14px;
+    overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+#image-toolkit-workspace .form-group {
+    margin-bottom: 13px;
+}
+
+#image-toolkit-workspace .form-group label {
+    display: block;
+    margin-bottom: 7px;
+    color: #aeb8cf;
+    font-size: 13px;
+}
+
+#image-toolkit-workspace .glass-input {
+    height: 44px;
+    border-radius: 8px;
+    padding: 0 16px;
+    color: #f8fafc;
+    font-size: 16px;
+    background: rgba(7, 13, 29, 0.56);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+#image-toolkit-workspace select.glass-input {
+    appearance: auto;
+}
+
+#image-toolkit-workspace .glass-range {
+    width: 100%;
+}
+
+#image-toolkit-workspace .folder-input-wrapper {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 44px;
+    align-items: center;
+    gap: 8px;
+    padding: 0 22px 22px;
+}
+
+#image-toolkit-workspace #sidebar-image-output .form-group {
+    margin: 0;
+    padding: 0 22px 22px;
+}
+
+#image-toolkit-workspace #sidebar-image-output .folder-input-wrapper {
+    padding: 0;
+}
+
+#image-toolkit-workspace .icon-btn-small {
+    height: 44px;
+    width: 44px;
+    border-radius: 8px;
+    color: #f8fafc;
+    background: rgba(7, 13, 29, 0.56);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+#image-toolkit-workspace .settings-footer-bar {
+    padding: 14px 22px 20px;
+    border: 0;
+    background: rgba(13, 32, 42, 0.96);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+}
+
+#image-toolkit-workspace #image-process-resize-btn,
+#image-toolkit-workspace #image-process-compress-btn,
+#image-toolkit-workspace #image-process-watermark-btn,
+#image-toolkit-workspace #image-process-convert-btn {
+    width: 100%;
+    min-height: 56px;
+    border-radius: 10px;
+    justify-content: center;
+    gap: 14px;
+    font-size: 18px;
+    font-weight: 800;
+}
+
+#image-toolkit-workspace #image-process-resize-btn:not(:disabled),
+#image-toolkit-workspace #image-process-compress-btn:not(:disabled),
+#image-toolkit-workspace #image-process-watermark-btn:not(:disabled),
+#image-toolkit-workspace #image-process-convert-btn:not(:disabled) {
+    background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+    box-shadow: 0 16px 36px rgba(16, 185, 129, 0.24);
+}
+
+#image-toolkit-workspace #image-process-resize-btn:disabled,
+#image-toolkit-workspace #image-process-compress-btn:disabled,
+#image-toolkit-workspace #image-process-watermark-btn:disabled,
+#image-toolkit-workspace #image-process-convert-btn:disabled {
+    opacity: 0.5;
+    background: rgba(148, 163, 184, 0.18);
+}
+
+[data-theme="light"] #image-toolkit-workspace {
+    color: var(--text-main);
+}
+
+[data-theme="light"] #image-toolkit-workspace .pdf-workspace-container {
+    background:
+        radial-gradient(circle at 12% 8%, rgba(16, 185, 129, 0.08), transparent 34%),
+        radial-gradient(circle at 78% 32%, rgba(6, 182, 212, 0.08), transparent 32%),
+        rgba(248, 250, 252, 0.85);
+}
+
+[data-theme="light"] #image-toolkit-workspace .pdf-header-left p,
+[data-theme="light"] #image-toolkit-workspace .upload-content p,
+[data-theme="light"] #image-toolkit-workspace .form-group label,
+[data-theme="light"] #image-toolkit-workspace .thumb-meta,
+[data-theme="light"] #image-toolkit-workspace .pdf-drop-note {
+    color: var(--text-muted);
+}
+
+[data-theme="light"] #image-toolkit-workspace .pdf-mode-tabs {
+    background: rgba(255, 255, 255, 0.82);
+    border-color: rgba(15, 23, 42, 0.12);
+}
+
+[data-theme="light"] #image-toolkit-workspace .pdf-tab {
+    color: var(--text-main);
+}
+
+[data-theme="light"] #image-toolkit-workspace .pdf-tab.active {
+    color: white;
+    background: linear-gradient(135deg, #10b981, #0891b2);
+    box-shadow: 0 18px 38px rgba(16, 185, 129, 0.16);
+}
+
+[data-theme="light"] #image-toolkit-workspace .pdf-upload-zone {
+    background:
+        radial-gradient(circle at 50% 48%, rgba(16, 185, 129, 0.12), transparent 40%),
+        rgba(255, 255, 255, 0.88);
+    border-color: rgba(15, 23, 42, 0.12);
+}
+
+[data-theme="light"] #image-toolkit-workspace .pdf-upload-zone:hover,
+[data-theme="light"] #image-toolkit-workspace .pdf-upload-zone.dragover {
+    border-color: rgba(16, 185, 129, 0.55);
+    background:
+        radial-gradient(circle at 50% 48%, rgba(16, 185, 129, 0.18), transparent 45%),
+        rgba(255, 255, 255, 0.96);
+}
+
+[data-theme="light"] #image-toolkit-workspace .pdf-browse-btn,
+[data-theme="light"] #image-toolkit-workspace .icon-btn-small {
+    color: var(--text-main);
+    background: rgba(255, 255, 255, 0.96);
+    border-color: rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] #image-toolkit-workspace .pdf-image-grid-section,
+[data-theme="light"] #image-toolkit-workspace .pdf-sidebar {
+    background: rgba(255, 255, 255, 0.92);
+    border-color: rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] #image-toolkit-workspace .pdf-thumb-card {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: rgba(15, 23, 42, 0.08);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] #image-toolkit-workspace .thumb-preview-wrap {
+    background: rgba(241, 245, 249, 0.85);
+}
+
+[data-theme="light"] #image-toolkit-workspace .glass-input {
+    background: rgba(255, 255, 255, 0.95);
+    color: var(--text-main);
+    border-color: rgba(15, 23, 42, 0.08);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+[data-theme="light"] #image-toolkit-workspace .settings-footer-bar {
+    background: rgba(255, 255, 255, 0.9);
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] #image-toolkit-workspace .thumb-title,
+[data-theme="light"] #image-toolkit-workspace .upload-content h3,
+[data-theme="light"] #image-toolkit-workspace .grid-header h4 {
+    color: var(--text-main);
+}
+
+[data-theme="light"] #image-toolkit-workspace .clear-btn {
+    color: #047857;
+}
+
+@media (max-width: 1100px) {
+    #image-toolkit-workspace .pdf-tab {
+        font-size: 12px;
+        padding: 4px 8px;
+        gap: 6px;
+    }
+}
+
+@media (max-width: 900px) {
+    #image-toolkit-workspace .pdf-layout-grid {
+        grid-template-columns: 1fr;
+        overflow-y: auto;
+    }
+
+    #image-toolkit-workspace .pdf-sidebar {
+        min-height: 360px;
+    }
+}
+
+@media (max-width: 700px) {
+    #image-toolkit-workspace .pdf-workspace-container {
+        padding: 22px;
+    }
+
+    #image-toolkit-workspace .pdf-mode-tabs {
+        height: auto;
+        flex-direction: column;
+    }
+
+    #image-toolkit-workspace .pdf-tab {
+        min-height: 48px;
+    }
+
+    #image-toolkit-workspace .pdf-thumb-card {
+        grid-template-columns: 64px minmax(0, 1fr) 34px;
+        gap: 10px;
+    }
+
+    #image-toolkit-workspace .thumb-preview-wrap {
+        width: 64px;
+        height: 44px;
+    }
+}
+
 @media (max-width: 1100px) {
     #pdf-workspace .pdf-tab {
         font-size: 12px;
@@ -3976,3 +4537,108 @@ select.glass-input {
     align-items: center;
     justify-content: center;
 }
+
+/* ==========================================
+   v2.2 New UI Additions
+   ========================================== */
+
+/* ─── Preset Management ────────────────── */
+.preset-wrapper {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.preset-save-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--panel-border);
+    color: var(--text-muted);
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+[data-theme="light"] .preset-save-btn {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.preset-save-btn:hover {
+    background: rgba(168, 85, 247, 0.15);
+    color: var(--accent-audio);
+    border-color: rgba(168, 85, 247, 0.3);
+}
+
+.preset-save-input-group {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: rgba(168, 85, 247, 0.08);
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(168, 85, 247, 0.2);
+    animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.preset-save-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.icon-btn-success, .icon-btn-danger {
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 14px;
+    transition: transform 0.2s;
+}
+
+.icon-btn-success { background: #10b981; }
+.icon-btn-danger { background: #f43f5e; }
+
+.icon-btn-success:hover, .icon-btn-danger:hover { transform: scale(1.1); }
+
+.preset-delete-btn {
+    opacity: 0;
+    margin-left: auto;
+    color: #f43f5e;
+    padding: 4px;
+    transition: opacity 0.2s;
+}
+
+.preset-option-row:hover .preset-delete-btn {
+    opacity: 1;
+}
+
+/* ─── Image Toolkit Launchpad Card ─────── */
+.card-image .card-glow {
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.25) 0%, transparent 70%);
+}
+
+.card-image .card-icon {
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.15);
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+}
+
+.card-badges .badge.image-resize { color: #10b981; background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.15); }
+.card-badges .badge.image-compress { color: #06b6d4; background: rgba(6, 182, 212, 0.1); border-color: rgba(6, 182, 212, 0.15); }
+.card-badges .badge.image-watermark { color: #f59e0b; background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.15); }

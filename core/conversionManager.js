@@ -2,6 +2,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { spawn } = require('child_process');
+const EventEmitter = require('events');
+const conversionEvents = new EventEmitter();
 
 const PLATFORM = process.platform;
 const DEV_ROOT = path.resolve(__dirname, '..');
@@ -1192,7 +1194,7 @@ async function prepareBatchJobs(jobs) {
     }));
 }
 
-async function convert({ inputPath, outputPath, format, type, quality }, onProgress, controller = null) {
+async function convert({ inputPath, outputPath, format, type, quality, preset, isBatchPart }, onProgress, controller = null) {
     throwIfCancelled(controller);
     const normalizedFormat = await validateRequest({ inputPath, outputPath, format, type });
     throwIfCancelled(controller);
@@ -1211,9 +1213,10 @@ async function convert({ inputPath, outputPath, format, type, quality }, onProgr
     }
 
     try {
+        let result;
         switch (engine) {
             case 'ffmpeg':
-                return await convertWithFFmpeg({
+                result = await convertWithFFmpeg({
                     inputPath,
                     outputPath,
                     format: normalizedFormat,
@@ -1222,26 +1225,65 @@ async function convert({ inputPath, outputPath, format, type, quality }, onProgr
                     onProgress,
                     controller
                 });
+                break;
             case 'libreoffice':
-                return await convertWithLibreOffice({
+                result = await convertWithLibreOffice({
                     inputPath,
                     outputPath,
                     format: normalizedFormat,
                     onProgress,
                     controller
                 });
+                break;
             case '7zip':
-                return await convertWithSevenZip({
+                result = await convertWithSevenZip({
                     inputPath,
                     outputPath,
                     format: normalizedFormat,
                     onProgress,
                     controller
                 });
+                break;
             default:
                 throw new Error(`Unknown engine for type: ${resolvedType}`);
         }
+
+        if (!isBatchPart) {
+            const timestamp = Date.now();
+            let size = 0;
+            try { size = fs.statSync(inputPath).size; } catch (e) {}
+            conversionEvents.emit('job-complete', {
+                timestamp,
+                inputFiles: [{ name: path.basename(inputPath), path: inputPath, size }],
+                inputFormat: path.extname(inputPath).toLowerCase().replace('.', ''),
+                outputFormat: format,
+                outputPath: result.outputPath,
+                preset: preset || 'Custom',
+                quality,
+                conversionType: resolvedType,
+                status: 'success'
+            });
+        }
+
+        return result;
     } catch (error) {
+        if (!isBatchPart) {
+            const timestamp = Date.now();
+            let size = 0;
+            try { size = fs.statSync(inputPath).size; } catch (e) {}
+            conversionEvents.emit('job-complete', {
+                timestamp,
+                inputFiles: [{ name: path.basename(inputPath), path: inputPath, size }],
+                inputFormat: path.extname(inputPath).toLowerCase().replace('.', ''),
+                outputFormat: format,
+                outputPath,
+                preset: preset || 'Custom',
+                quality,
+                conversionType: resolvedType,
+                status: 'failed'
+            });
+        }
+
         if (isCancellationError(error)) {
             throw error;
         }
@@ -1407,6 +1449,36 @@ async function convertBatch({ jobs }, onProgress, controller = null) {
     const cancelledCount = results.filter((result) => result?.cancelled).length;
     const errorCount = results.filter((result) => result && !result.success && !result.cancelled).length;
 
+    let status = 'success';
+    if (successCount === 0) {
+        status = 'failed';
+    } else if (errorCount > 0 || cancelledCount > 0) {
+        status = 'partial';
+    }
+
+    const firstJob = preparedJobs[0] || {};
+    const inputFiles = preparedJobs.map(job => {
+        let size = 0;
+        try { size = fs.statSync(job.inputPath).size; } catch(e){}
+        return {
+            name: path.basename(job.inputPath),
+            path: job.inputPath,
+            size
+        };
+    });
+
+    conversionEvents.emit('job-complete', {
+        timestamp: Date.now(),
+        inputFiles,
+        inputFormat: path.extname(firstJob.inputPath || '').toLowerCase().replace('.', ''),
+        outputFormat: firstJob.format || '',
+        outputPath: path.dirname(firstJob.outputPath || ''),
+        preset: firstJob.preset || 'Custom',
+        quality: firstJob.quality || null,
+        conversionType: firstJob.type || null,
+        status
+    });
+
     return {
         success: errorCount === 0 && cancelledCount === 0,
         cancelled: cancelledCount > 0,
@@ -1431,5 +1503,6 @@ module.exports = {
     FORMAT_TYPES,
     FFMPEG_PATH: ENGINE_DEFINITIONS.ffmpeg.candidates[0],
     SOFFICE_PATH: ENGINE_DEFINITIONS.libreoffice.candidates[0],
-    SEVENZIP_PATH: ENGINE_DEFINITIONS['7zip'].candidates[0]
+    SEVENZIP_PATH: ENGINE_DEFINITIONS['7zip'].candidates[0],
+    conversionEvents
 };

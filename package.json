@@ -1,6 +1,6 @@
 {
   "name": "converthub-v2",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "ConvertHub v2 - Universal File Converter",
   "main": "main.js",
   "author": "Priyansh Verma",
@@ -53,6 +53,7 @@
     "@pdfsmaller/pdf-encrypt": "^1.0.2",
     "electron-updater": "^6.8.3",
     "pdf-lib": "^1.17.1",
-    "pdfjs-dist": "^4.10.38"
+    "pdfjs-dist": "^4.10.38",
+    "sharp": "^0.33.5"
   }
 }
