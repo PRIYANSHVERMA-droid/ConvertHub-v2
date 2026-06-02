@@ -6,6 +6,7 @@ const { initUpdater } = require('./core/updater');
 
 let desktopNotificationsEnabled = true;
 let mainWindow;
+const PROGRESS_EVENT_INTERVAL_MS = 120;
 let conversionManager = null;
 let imageProcessor = null;
 let pdfProcessor = null;
@@ -241,30 +242,43 @@ app.whenReady().then(() => {
         if (folderToOpen) n.on('click', () => shell.openPath(folderToOpen));
     });
 
+    // Delete file handler
+    ipcMain.handle('delete-file', async (_e, { filePath }) => {
+        try {
+            await fs.promises.rm(filePath, { force: true });
+            return { success: true };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    });
+
+    // Open path handler
+    ipcMain.handle('open:path', (_e, p) => shell.openPath(p));
+
+    // Register global history listener once app is ready
+    const manager = getConversionManager();
+    manager.conversionEvents.on('job-complete', (record) => {
+        getHistoryStore().appendJob(record);
+        if (!desktopNotificationsEnabled || !mainWindow || mainWindow.isDestroyed()) return;
+        if (mainWindow.isFocused()) {
+            mainWindow.webContents.send('conversion-complete-focused', record);
+        } else {
+            const n = new Notification({
+                title: 'ConvertHub — Conversion Complete',
+                body: `${record.inputFiles.length} files converted to ${record.outputFormat.toUpperCase()}.`,
+                icon: appIconPath
+            });
+            n.on('click', () => { shell.openPath(record.outputPath); mainWindow.focus(); });
+            n.show();
+            mainWindow.webContents.send('conversion-complete-background', record);
+        }
+    });
+
     createWindow();
 });
 
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
-
-// Register global history listener once
-const manager = getConversionManager();
-manager.conversionEvents.on('job-complete', (record) => {
-    getHistoryStore().appendJob(record);
-    if (!desktopNotificationsEnabled || !mainWindow || mainWindow.isDestroyed()) return;
-    if (mainWindow.isFocused()) {
-        mainWindow.webContents.send('conversion-complete-focused', record);
-    } else {
-        const n = new Notification({
-            title: 'ConvertHub — Conversion Complete',
-            body: `${record.inputFiles.length} files converted to ${record.outputFormat.toUpperCase()}.`,
-            icon: appIconPath
-        });
-        n.on('click', () => { shell.openPath(record.outputPath); mainWindow.focus(); });
-        n.show();
-        mainWindow.webContents.send('conversion-complete-background', record);
-    }
-});
 
 nativeTheme.on('updated', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {

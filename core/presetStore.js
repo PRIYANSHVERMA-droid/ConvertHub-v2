@@ -2,12 +2,14 @@ const fs = require('fs');
 const path = require('path');
 const { app } = require('electron');
 
-const PRESETS_FILE = path.join(app.getPath('userData'), 'presets.json');
+function getPresetsFile() {
+    return path.join(app.getPath('userData'), 'presets.json');
+}
 
 function getPresets() {
     try {
-        if (fs.existsSync(PRESETS_FILE)) {
-            const data = fs.readFileSync(PRESETS_FILE, 'utf8');
+        if (fs.existsSync(getPresetsFile())) {
+            const data = fs.readFileSync(getPresetsFile(), 'utf8');
             return JSON.parse(data || '{}');
         }
     } catch (error) {
@@ -26,9 +28,9 @@ function savePreset(type, preset) {
         presets[type] = presets[type].filter(p => p.id !== preset.id && p.label !== preset.label);
         presets[type].push(preset);
 
-        const tempPath = `${PRESETS_FILE}.tmp`;
+        const tempPath = `${getPresetsFile()}.tmp`;
         fs.writeFileSync(tempPath, JSON.stringify(presets, null, 2), 'utf8');
-        fs.renameSync(tempPath, PRESETS_FILE);
+        fs.renameSync(tempPath, getPresetsFile());
         return true;
     } catch (error) {
         console.error('[presetStore] Error saving preset:', error);
@@ -41,9 +43,9 @@ function deletePreset(type, presetId) {
         const presets = getPresets();
         if (presets[type]) {
             presets[type] = presets[type].filter(p => p.id !== presetId);
-            const tempPath = `${PRESETS_FILE}.tmp`;
+            const tempPath = `${getPresetsFile()}.tmp`;
             fs.writeFileSync(tempPath, JSON.stringify(presets, null, 2), 'utf8');
-            fs.renameSync(tempPath, PRESETS_FILE);
+            fs.renameSync(tempPath, getPresetsFile());
             return true;
         }
     } catch (error) {

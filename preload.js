@@ -90,8 +90,8 @@ contextBridge.exposeInMainWorld('app', {
     // Dialogs
     selectOutputFolder: () => ipcRenderer.invoke('select-output-folder'),
     selectFiles: () => ipcRenderer.invoke('select-files'),
-    openFileDialog: () => ipcRenderer.invoke('open:file-dialog'),
-    openFolderDialog: () => ipcRenderer.invoke('open:folder-dialog'),
+    openFileDialog: () => ipcRenderer.invoke('select-files'),
+    openFolderDialog: () => ipcRenderer.invoke('select-output-folder'),
     getDefaultOutput: () => ipcRenderer.invoke('get-default-output'),
     getPathForFile: (file) => {
         try {
@@ -107,7 +107,7 @@ contextBridge.exposeInMainWorld('app', {
     // Shell
     openFolder: (folderPath) => ipcRenderer.invoke('open-folder', folderPath),
     openPath: (targetPath) => ipcRenderer.invoke('open:path', targetPath),
-    pathExists: (filePath) => ipcRenderer.invoke('path-exists', { path: filePath }),
+    pathExists: (pathObj) => ipcRenderer.invoke('path-exists', pathObj),
     deleteFile: (filePath) => ipcRenderer.invoke('delete-file', { filePath }),
     getFileSize: (filePath) => ipcRenderer.invoke('get-file-size', { filePath }),
 

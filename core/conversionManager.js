@@ -2,7 +2,14 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { spawn } = require('child_process');
-const { processImage } = require('../engines/imageProcessor');
+
+let processImage = null;
+try {
+    processImage = require('../engines/imageProcessor').processImage;
+} catch (e) {
+    console.warn('[conversionManager] imageProcessor engine could not be loaded:', e.message);
+}
+
 const EventEmitter = require('events');
 const conversionEvents = new EventEmitter();
 
@@ -1217,7 +1224,7 @@ async function convert({ inputPath, outputPath, format, type, quality, preset, i
         let result;
         switch (engine) {
             case 'ffmpeg':
-                if (resolvedType === 'image') {
+                if (resolvedType === 'image' && typeof processImage === 'function') {
                     result = await processImage({
                         inputPath,
                         outputFolder: path.dirname(outputPath),
@@ -1403,7 +1410,7 @@ async function convertBatch({ jobs }, onProgress, controller = null) {
                 activeJobs += 1;
                 engineActiveCounts.set(engine, (engineActiveCounts.get(engine) || 0) + 1);
 
-                convert(job, (percent) => {
+                convert({ ...job, isBatchPart: true }, (percent) => {
                     if (onProgress) {
                         onProgress({
                             batchIndex: index,
@@ -1476,12 +1483,15 @@ async function convertBatch({ jobs }, onProgress, controller = null) {
         };
     });
 
+    const successResult = results.find((result) => result?.success);
+    const finalOutputPath = successResult ? successResult.outputPath : (firstJob.outputPath || '');
+
     conversionEvents.emit('job-complete', {
         timestamp: Date.now(),
         inputFiles,
         inputFormat: path.extname(firstJob.inputPath || '').toLowerCase().replace('.', ''),
         outputFormat: firstJob.format || '',
-        outputPath: path.dirname(firstJob.outputPath || ''),
+        outputPath: finalOutputPath,
         preset: firstJob.preset || 'Custom',
         quality: firstJob.quality || null,
         conversionType: firstJob.type || null,

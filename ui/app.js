@@ -118,6 +118,9 @@
     const launchImageBtn = document.getElementById('launch-image-btn');
 
     let customPresets = {};
+    let engineStatus = null;
+    let dragSrcId = null;
+    let dragOverId = null;
     const batchStatus = document.getElementById('batch-status');
     const themeToggle = document.getElementById('theme-toggle');
     const settingsToggle = document.getElementById('settings-toggle');
@@ -432,17 +435,7 @@
         localStorage.setItem('converthub_notifications', JSON.stringify(notifications.slice(0, 50)));
     }
 
-    function getRecentFiles() {
-        try {
-            return JSON.parse(localStorage.getItem('converthub_recent') || '[]');
-        } catch {
-            return [];
-        }
-    }
 
-    function saveRecentFiles(files) {
-        localStorage.setItem('converthub_recent', JSON.stringify(files.slice(0, 20)));
-    }
 
     function serializeQueue() {
         const serialized = fileQueue.map(item => ({
@@ -899,15 +892,7 @@
         }
     }
 
-    function addRecentFile(fileName, format, outputPath) {
-        const recents = getRecentFiles();
-        recents.unshift({
-            name: fileName,
-            format: String(format || '').toUpperCase(),
-            outputPath: outputPath || '',
-            time: new Date().toLocaleTimeString()
-        });
-        saveRecentFiles(recents);
+    function addRecentFile() {
         loadRecentFiles();
     }
 
@@ -960,17 +945,19 @@
                         switchWorkspace('converter');
                         addFilesToQueue(validFiles);
                         
-                        // Apply settings
-                        const type = item.conversionType || detectTypeFromFileName(validFiles[0]);
-                        if (type) {
-                            selectedScope = { kind: 'group', type };
-                            const group = ensureGroupSettings(type);
-                            group.format = item.outputFormat;
-                            group.quality = item.quality;
-                            group.outputFolder = getFolderFromPath(item.outputPath);
-                            syncSidebarFromScope();
-                        }
-                        showToast('Job restored to queue.', 'success');
+                        // Apply settings with a small delay to let DOM settle
+                        setTimeout(() => {
+                            const type = item.conversionType || detectTypeFromFileName(validFiles[0]);
+                            if (type) {
+                                selectedScope = { kind: 'group', type };
+                                const group = ensureGroupSettings(type);
+                                group.format = item.outputFormat;
+                                group.quality = item.quality;
+                                group.outputFolder = getFolderFromPath(item.outputPath);
+                                syncSidebarFromScope();
+                            }
+                            showToast('Job restored to queue.', 'success');
+                        }, 50);
                     });
                     div.querySelector('.open-file-btn').addEventListener('click', (e) => {
                         e.stopPropagation();
@@ -3489,6 +3476,7 @@
         event.target.value = '';
     });
     pdfImgClearBtn?.addEventListener('click', clearPdfImages);
+    document.getElementById('pdf-img-add-more-btn')?.addEventListener('click', () => pdfImgInput?.click());
     pdfCompileBtn?.addEventListener('click', compilePdfImages);
 
     pdfPickFolderBtn?.addEventListener('click', async () => {
@@ -4625,12 +4613,13 @@
         let successCount = 0;
         try {
             for (const file of imageToolkitFiles) {
+                const fileExt = window.app.getFileExtension(file.path) || 'png';
                 const res = await window.app.processImage({
                     inputPath: file.path,
                     outputFolder,
                     options: {
                         ...options,
-                        format: 'original'
+                        format: fileExt
                     }
                 });
                 if (res.success) {

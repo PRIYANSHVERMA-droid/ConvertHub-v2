@@ -2,12 +2,14 @@ const fs = require('fs');
 const path = require('path');
 const { app } = require('electron');
 
-const HISTORY_FILE = path.join(app.getPath('userData'), 'history.json');
+function getHistoryFile() {
+    return path.join(app.getPath('userData'), 'history.json');
+}
 
 function getHistory() {
     try {
-        if (fs.existsSync(HISTORY_FILE)) {
-            const data = fs.readFileSync(HISTORY_FILE, 'utf8');
+        if (fs.existsSync(getHistoryFile())) {
+            const data = fs.readFileSync(getHistoryFile(), 'utf8');
             return JSON.parse(data || '[]');
         }
     } catch (error) {
@@ -18,9 +20,9 @@ function getHistory() {
 
 function saveHistory(history) {
     try {
-        const tempPath = `${HISTORY_FILE}.tmp`;
+        const tempPath = `${getHistoryFile()}.tmp`;
         fs.writeFileSync(tempPath, JSON.stringify(history, null, 2), 'utf8');
-        fs.renameSync(tempPath, HISTORY_FILE);
+        fs.renameSync(tempPath, getHistoryFile());
         return true;
     } catch (error) {
         console.error('[historyStore] Error writing history file:', error);
@@ -36,8 +38,8 @@ function appendJob(record) {
 
 function clearHistory() {
     try {
-        if (fs.existsSync(HISTORY_FILE)) {
-            fs.unlinkSync(HISTORY_FILE);
+        if (fs.existsSync(getHistoryFile())) {
+            fs.unlinkSync(getHistoryFile());
         }
         return true;
     } catch (error) {
