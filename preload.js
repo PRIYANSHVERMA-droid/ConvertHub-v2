@@ -45,6 +45,12 @@ function buildOutputPath(inputPath, format, outputFolder) {
     return joinPath(outputDirectory, ext ? `${fileStem}.${ext}` : fileStem);
 }
 
+function getFileExtension(filePath) {
+    const fileName = getFileName(filePath);
+    const lastDotIndex = fileName.lastIndexOf('.');
+    return lastDotIndex > 0 ? fileName.slice(lastDotIndex + 1) : '';
+}
+
 function detectPlatform() {
     const userAgent = String(globalThis.navigator?.userAgent || '').toLowerCase();
     if (userAgent.includes('windows')) return 'win32';
@@ -95,6 +101,7 @@ contextBridge.exposeInMainWorld('app', {
         }
     },
     buildOutputPath,
+    getFileExtension,
     getPlatform: () => detectPlatform(),
 
     // Shell

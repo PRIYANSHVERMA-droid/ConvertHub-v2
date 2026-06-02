@@ -32,6 +32,7 @@ async function processImage({ inputPath, outputFolder, options }) {
     await fs.promises.mkdir(outputFolder, { recursive: true });
 
     let pipeline = sharp(inputPath);
+    const baseMetadata = await pipeline.metadata();
 
     // 1. Resize & Crop
     if (options.resize) {
@@ -65,9 +66,22 @@ async function processImage({ inputPath, outputFolder, options }) {
             if (fs.existsSync(imagePath)) {
                 let watermarkImg = sharp(imagePath);
                 const metadata = await watermarkImg.metadata();
+                let width = metadata.width;
+                let height = metadata.height;
+                
                 if (scale !== 1) {
-                    watermarkImg = watermarkImg.resize(Math.round(metadata.width * scale));
+                    width = Math.round(width * scale);
+                    height = Math.round(height * scale);
                 }
+                
+                // Ensure watermark is not larger than base image
+                if (width > baseMetadata.width || height > baseMetadata.height) {
+                    const ratio = Math.min(baseMetadata.width / width, baseMetadata.height / height);
+                    width = Math.round(width * ratio);
+                    height = Math.round(height * ratio);
+                }
+                
+                watermarkImg = watermarkImg.resize(width, height);
                 const watermarkBuffer = await watermarkImg.ensureAlpha(opacity).toBuffer();
                 composites.push({
                     input: watermarkBuffer,

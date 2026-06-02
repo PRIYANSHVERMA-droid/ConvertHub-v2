@@ -102,7 +102,15 @@
                             <span class="badge image-watermark"><i class="fa-solid fa-signature"></i> Watermark</span>
                         </div>
                     </div>
-                </div>
+        <!-- Video Toolkit Card -->
+        <div class="launchpad-card card-video coming-soon no-drag" id="launch-video-btn">
+            <div class="card-glow"></div>
+            <div class="card-icon"><i class="fa-solid fa-film"></i></div>
+            <h3>Smart Video Toolkit</h3>
+            <p>Coming soon – powerful video conversion features.</p>
+            <div class="coming-soon-badge">Coming Soon</div>
+        </div>
+        </div>
                 
                 <div class="launchpad-footer">
                     <label class="toggle-row no-drag" for="bypass-launchpad-checkbox">
@@ -868,7 +876,6 @@
                         <button class="pdf-tab active" data-mode="image-resize" id="image-tab-resize"><i class="fa-solid fa-expand"></i> Resize & Crop</button>
                         <button class="pdf-tab" data-mode="image-compress" id="image-tab-compress"><i class="fa-solid fa-compress"></i> Compress</button>
                         <button class="pdf-tab" data-mode="image-watermark" id="image-tab-watermark"><i class="fa-solid fa-signature"></i> Watermark</button>
-                        <button class="pdf-tab" data-mode="image-convert" id="image-tab-convert"><i class="fa-solid fa-repeat"></i> Convert</button>
                     </div>
                 </div>
 
@@ -940,29 +947,6 @@
                                     <button class="clear-btn no-drag" id="image-watermark-clear-btn"><i class="fa-solid fa-trash-can"></i> Clear All</button>
                                 </div>
                                 <div class="pdf-uploaded-list" id="image-watermark-grid"></div>
-                            </div>
-                        </section>
-
-                        <!-- Convert Panel -->
-                        <section class="pdf-panel hidden" id="panel-image-convert">
-                            <div class="pdf-upload-zone no-drag" id="image-convert-dropzone">
-                                <div class="upload-content">
-                                    <div class="pdf-drop-icon"><i class="fa-solid fa-repeat"></i></div>
-                                    <h3>Convert Images</h3>
-                                    <p>Quickly convert between popular image formats.</p>
-                                    <button class="pdf-browse-btn no-drag" id="image-convert-browse-btn" type="button">
-                                        <i class="fa-solid fa-plus"></i> Add Images
-                                    </button>
-                                    <span class="pdf-drop-note"><i class="fa-solid fa-lock"></i> Drag and drop files or browse from your device</span>
-                                </div>
-                                <input type="file" id="image-convert-input" multiple accept="image/*" class="hidden">
-                            </div>
-                            <div class="pdf-image-grid-section hidden" id="image-convert-grid-section">
-                                <div class="grid-header">
-                                    <h4 id="image-convert-count">0 Images Selected</h4>
-                                    <button class="clear-btn no-drag" id="image-convert-clear-btn"><i class="fa-solid fa-trash-can"></i> Clear All</button>
-                                </div>
-                                <div class="pdf-uploaded-list" id="image-convert-grid"></div>
                             </div>
                         </section>
                     </main>
@@ -1038,29 +1022,6 @@
                             <div class="settings-footer-bar">
                                 <button id="image-process-watermark-btn" class="primary-btn glow-btn no-drag" disabled>
                                     <i class="fa-solid fa-signature"></i> Apply Watermark
-                                </button>
-                            </div>
-                        </section>
-
-                        <!-- Convert Sidebar -->
-                        <section class="pdf-sidebar-section hidden" id="sidebar-image-convert">
-                            <div class="pdf-sidebar-title">
-                                <h4><i class="fa-solid fa-repeat"></i> Conversion Settings</h4>
-                            </div>
-                            <div class="settings-form-scroll">
-                                <div class="form-group">
-                                    <label>Output Format</label>
-                                    <select id="image-convert-format" class="glass-input no-drag">
-                                        <option value="jpg">JPEG (.jpg)</option>
-                                        <option value="png">PNG (.png)</option>
-                                        <option value="webp">WebP (.webp)</option>
-                                        <option value="avif">AVIF (.avif)</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="settings-footer-bar">
-                                <button id="image-process-convert-btn" class="primary-btn glow-btn no-drag" disabled>
-                                    <i class="fa-solid fa-repeat"></i> Convert Images
                                 </button>
                             </div>
                         </section>

@@ -18,6 +18,21 @@
     --primary-btn-hover: linear-gradient(135deg, #7c3aed, #2563eb);
     
     --logo-gradient: linear-gradient(135deg, #f43f5e, #f97316);
+    
+    /* Launchpad Responsive System Variables */
+    --launchpad-gap: 40px;
+    --launchpad-card-gap: 28px;
+    --launchpad-card-padding-v: clamp(20px, 3.5vw, 35px);
+    --launchpad-card-padding-h: clamp(15px, 2.5vw, 30px);
+    --launchpad-icon-size: clamp(50px, 7vw, 72px);
+    --launchpad-icon-margin: clamp(15px, 2vw, 25px);
+    --launchpad-title-size: clamp(16px, 2vw, 20px);
+    --launchpad-title-margin: clamp(8px, 1vw, 12px);
+    --launchpad-desc-size: clamp(12px, 1.4vw, 14px);
+    --launchpad-desc-margin: clamp(15px, 2vw, 25px);
+    --launchpad-badge-padding-v: clamp(3px, 0.5vw, 5px);
+    --launchpad-badge-padding-h: clamp(6px, 1vw, 10px);
+    --launchpad-badge-font-size: clamp(9px, 1vw, 11px);
 }
 
 [data-theme="light"] {
@@ -1703,7 +1718,7 @@ select.glass-input {
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 40px;
+    gap: var(--launchpad-gap);
     margin: auto 0;
 }
 
@@ -1739,14 +1754,14 @@ select.glass-input {
 .launchpad-cards {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 28px;
+    gap: var(--launchpad-card-gap);
 }
 
 .launchpad-card {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 24px;
-    padding: 35px 30px;
+    border-radius: clamp(16px, 2.5vw, 24px);
+    padding: var(--launchpad-card-padding-v) var(--launchpad-card-padding-h);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1802,14 +1817,14 @@ select.glass-input {
 }
 
 .card-icon {
-    width: 72px;
-    height: 72px;
-    border-radius: 20px;
+    width: var(--launchpad-icon-size);
+    height: var(--launchpad-icon-size);
+    border-radius: clamp(12px, 2vw, 20px);
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 32px;
-    margin-bottom: 25px;
+    font-size: calc(var(--launchpad-icon-size) * 0.45);
+    margin-bottom: var(--launchpad-icon-margin);
     z-index: 2;
     transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -1831,18 +1846,18 @@ select.glass-input {
 }
 
 .launchpad-card h3 {
-    font-size: 20px;
+    font-size: var(--launchpad-title-size);
     font-weight: 600;
-    margin-bottom: 12px;
+    margin-bottom: var(--launchpad-title-margin);
     color: var(--text-main);
     z-index: 2;
 }
 
 .launchpad-card p {
-    font-size: 14px;
+    font-size: var(--launchpad-desc-size);
     color: var(--text-muted);
-    line-height: 1.6;
-    margin-bottom: 25px;
+    line-height: 1.5;
+    margin-bottom: var(--launchpad-desc-margin);
     z-index: 2;
     max-width: 320px;
 }
@@ -1857,9 +1872,9 @@ select.glass-input {
 }
 
 .card-badges .badge {
-    padding: 5px 10px;
-    border-radius: 8px;
-    font-size: 11px;
+    padding: var(--launchpad-badge-padding-v) var(--launchpad-badge-padding-h);
+    border-radius: clamp(6px, 1vw, 8px);
+    font-size: var(--launchpad-badge-font-size);
     font-weight: 600;
     display: flex;
     align-items: center;
@@ -1867,6 +1882,10 @@ select.glass-input {
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.06);
     color: var(--text-muted);
+}
+
+.card-badges .badge i {
+    font-size: 10px;
 }
 
 [data-theme="light"] .card-badges .badge {
@@ -2284,18 +2303,77 @@ select.glass-input {
 /* ==========================================
    Responsive Design for Launchpad
    ========================================== */
-@media (max-width: 768px) {
-    .launchpad-cards {
-        grid-template-columns: 1fr;
-        gap: 20px;
+@media (max-height: 800px) {
+    :root {
+        --launchpad-gap: 24px;
+        --launchpad-card-gap: 18px;
+        --launchpad-card-padding-v: 18px;
+        --launchpad-card-padding-h: 15px;
+        --launchpad-icon-size: 48px;
+        --launchpad-icon-margin: 12px;
+        --launchpad-title-size: 16px;
+        --launchpad-title-margin: 6px;
+        --launchpad-desc-size: 12px;
+        --launchpad-desc-margin: 12px;
+        --launchpad-badge-padding-v: 3px;
+        --launchpad-badge-padding-h: 8px;
+        --launchpad-badge-font-size: 9.5px;
     }
-    
-    .launchpad-container {
-        gap: 30px;
-    }
-    
     .launchpad-header h1 {
         font-size: 26px;
+    }
+    .launchpad-header p {
+        font-size: 14px;
+    }
+}
+
+@media (max-height: 700px) {
+    :root {
+        --launchpad-gap: 16px;
+        --launchpad-card-gap: 14px;
+        --launchpad-card-padding-v: 12px;
+        --launchpad-card-padding-h: 12px;
+        --launchpad-icon-size: 40px;
+        --launchpad-icon-margin: 8px;
+        --launchpad-title-size: 15px;
+        --launchpad-title-margin: 4px;
+        --launchpad-desc-size: 11.5px;
+        --launchpad-desc-margin: 8px;
+        --launchpad-badge-padding-v: 2px;
+        --launchpad-badge-padding-h: 6px;
+        --launchpad-badge-font-size: 9px;
+    }
+    .launchpad-header h1 {
+        font-size: 22px;
+        margin-bottom: 4px;
+    }
+    .launchpad-header p {
+        font-size: 13px;
+    }
+    .launchpad-footer .toggle-row {
+        padding: 6px 14px;
+        border-radius: 8px;
+    }
+}
+
+@media (max-width: 768px) {
+    :root {
+        --launchpad-gap: 20px;
+        --launchpad-card-gap: 16px;
+        --launchpad-card-padding-v: 16px;
+        --launchpad-card-padding-h: 12px;
+        --launchpad-icon-size: 44px;
+        --launchpad-icon-margin: 10px;
+        --launchpad-title-size: 16px;
+        --launchpad-title-margin: 6px;
+        --launchpad-desc-size: 12px;
+        --launchpad-desc-margin: 12px;
+    }
+    .launchpad-cards {
+        grid-template-columns: 1fr;
+    }
+    .launchpad-header h1 {
+        font-size: 24px;
     }
 }
 
@@ -4642,3 +4720,58 @@ select.glass-input {
 .card-badges .badge.image-resize { color: #10b981; background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.15); }
 .card-badges .badge.image-compress { color: #06b6d4; background: rgba(6, 182, 212, 0.1); border-color: rgba(6, 182, 212, 0.15); }
 .card-badges .badge.image-watermark { color: #f59e0b; background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.15); }
+
+/* ─── Video Toolkit Launchpad Card & Coming Soon ─── */
+.launchpad-card.coming-soon {
+    cursor: not-allowed;
+    opacity: 0.65;
+    border-style: dashed;
+}
+
+.launchpad-card.coming-soon:hover {
+    transform: none;
+    opacity: 0.8;
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="light"] .launchpad-card.coming-soon:hover {
+    background: rgba(255, 255, 255, 0.45);
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+.coming-soon-badge {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: linear-gradient(135deg, rgba(236, 72, 153, 0.2) 0%, rgba(244, 63, 94, 0.2) 100%);
+    border: 1px solid rgba(244, 63, 94, 0.4);
+    color: #f43f5e;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    z-index: 3;
+}
+
+[data-theme="light"] .coming-soon-badge {
+    background: linear-gradient(135deg, rgba(244, 63, 94, 0.1) 0%, rgba(236, 72, 153, 0.1) 100%);
+    color: #e11d48;
+    border-color: rgba(244, 63, 94, 0.3);
+}
+
+.card-video .card-glow {
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.25) 0%, transparent 70%);
+}
+
+.card-video .card-icon {
+    color: #3b82f6;
+    background: rgba(59, 130, 246, 0.15);
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+}
+
+.card-badges .badge.video-cut { color: #f43f5e; background: rgba(244, 63, 94, 0.08); border-color: rgba(244, 63, 94, 0.12); }
+.card-badges .badge.video-gif { color: #10b981; background: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.12); }
+.card-badges .badge.video-audio { color: #f59e0b; background: rgba(245, 158, 11, 0.08); border-color: rgba(245, 158, 11, 0.12); }

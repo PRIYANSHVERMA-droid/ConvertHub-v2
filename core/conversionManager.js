@@ -2,6 +2,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { spawn } = require('child_process');
+const { processImage } = require('../engines/imageProcessor');
 const EventEmitter = require('events');
 const conversionEvents = new EventEmitter();
 
@@ -1216,15 +1217,23 @@ async function convert({ inputPath, outputPath, format, type, quality, preset, i
         let result;
         switch (engine) {
             case 'ffmpeg':
-                result = await convertWithFFmpeg({
-                    inputPath,
-                    outputPath,
-                    format: normalizedFormat,
-                    type: resolvedType,
-                    quality,
-                    onProgress,
-                    controller
-                });
+                if (resolvedType === 'image') {
+                    result = await processImage({
+                        inputPath,
+                        outputFolder: path.dirname(outputPath),
+                        options: { format: normalizedFormat, quality }
+                    });
+                } else {
+                    result = await convertWithFFmpeg({
+                        inputPath,
+                        outputPath,
+                        format: normalizedFormat,
+                        type: resolvedType,
+                        quality,
+                        onProgress,
+                        controller
+                    });
+                }
                 break;
             case 'libreoffice':
                 result = await convertWithLibreOffice({

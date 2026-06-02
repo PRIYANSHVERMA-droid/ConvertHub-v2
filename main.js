@@ -11,6 +11,7 @@ let imageProcessor = null;
 let pdfProcessor = null;
 let _historyStore = null;
 let _presetStore = null;
+const progressDispatchState = new Map();
 const preloadPath = path.resolve(__dirname, 'preload.js');
 const appIconPath = path.join(__dirname, 'assets', 'app-icon.ico');
 
@@ -103,7 +104,7 @@ function createWindow() {
     console.log('[main] Creating window with preload:', preloadPath);
     mainWindow = new BrowserWindow({
         width: 1200, height: 800, minWidth: 950, minHeight: 650,
-        frame: true, icon: appIconPath, backgroundColor: '#0f111a',
+        frame: false, icon: appIconPath, backgroundColor: '#0f111a',
         webPreferences: { preload: preloadPath, nodeIntegration: false, contextIsolation: true },
         titleBarStyle: 'hidden'
     });
@@ -130,7 +131,7 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-    // Protocol handler
+    // Register custom protocol handler
     protocol.handle('converthub-media', (request) => {
         try {
             const url = new URL(request.url);

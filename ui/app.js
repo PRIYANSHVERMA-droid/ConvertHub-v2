@@ -2336,9 +2336,17 @@
 
     async function loadPdfThumbnailsFor(entry) {
         if (!entry || !entry.path) return;
-        const pdfSrc = `converthub-media:?path=${encodeURIComponent(entry.path)}`;
         try {
-            const loadingTask = window.pdfjsLib.getDocument(pdfSrc);
+            const pdfJs = window.pdfjsLib;
+            if (!pdfJs?.getDocument) {
+                throw new Error('PDF renderer is not available. Restart the app and try again.');
+            }
+            const pdfBytes = await getPdfDocumentBytes(entry);
+            const loadingTask = pdfJs.getDocument({
+                data: pdfBytes,
+                disableFontFace: false,
+                useSystemFonts: true
+            });
             const pdf = await loadingTask.promise;
             const total = pdf.numPages;
             const bank = document.createElement('div');
@@ -2362,7 +2370,7 @@
 
                 // Drag to merged pages
                 thumbWrap.addEventListener('dragstart', () => {
-                    pdfBankDrag = { path: pdfSrc, pageIndex: i - 1, name: entry.name, thumb };
+                    pdfBankDrag = { path: entry.path, pageIndex: i - 1, name: entry.name, thumb };
                 });
                 thumbWrap.addEventListener('dragend', () => {
                     pdfBankDrag = null;
@@ -3425,7 +3433,14 @@
         runBatchConversion();
     });
 
-    clearRecentBtn.addEventListener('click', () => {
+    clearRecentBtn.addEventListener('click', async () => {
+        if (window.app && window.app.clearHistory) {
+            try {
+                await window.app.clearHistory();
+            } catch (err) {
+                console.error('[renderer] Failed to clear history:', err);
+            }
+        }
         localStorage.removeItem('converthub_recent');
         loadRecentFiles();
         showToast('Recent history cleared', 'info');
@@ -4474,14 +4489,12 @@
     const imagePanels = {
         'image-resize': document.getElementById('panel-image-resize'),
         'image-compress': document.getElementById('panel-image-compress'),
-        'image-watermark': document.getElementById('panel-image-watermark'),
-        'image-convert': document.getElementById('panel-image-convert')
+        'image-watermark': document.getElementById('panel-image-watermark')
     };
     const imageSidebars = {
         'image-resize': document.getElementById('sidebar-image-resize'),
         'image-compress': document.getElementById('sidebar-image-compress'),
-        'image-watermark': document.getElementById('sidebar-image-watermark'),
-        'image-convert': document.getElementById('sidebar-image-convert')
+        'image-watermark': document.getElementById('sidebar-image-watermark')
     };
 
     function setImageToolkitMode(mode) {
@@ -4497,7 +4510,6 @@
         document.getElementById('image-process-resize-btn').disabled = !hasFiles || imageToolkitMode !== 'image-resize';
         document.getElementById('image-process-compress-btn').disabled = !hasFiles || imageToolkitMode !== 'image-compress';
         document.getElementById('image-process-watermark-btn').disabled = !hasFiles || imageToolkitMode !== 'image-watermark';
-        document.getElementById('image-process-convert-btn').disabled = !hasFiles || imageToolkitMode !== 'image-convert';
     }
 
     async function addImageToolkitFiles(files) {
@@ -4526,7 +4538,7 @@
     }
 
     function renderImageToolkitGrid() {
-        const modes = ['resize', 'compress', 'watermark', 'convert'];
+        const modes = ['resize', 'compress', 'watermark'];
         modes.forEach(mode => {
             const grid = document.getElementById(`image-${mode}-grid`);
             const section = document.getElementById(`image-${mode}-grid-section`);
@@ -4586,7 +4598,6 @@
         }
 
         const options = {};
-        const format = document.getElementById('image-convert-format').value;
 
         if (imageToolkitMode === 'image-resize') {
             options.resize = {
@@ -4619,12 +4630,12 @@
                     outputFolder,
                     options: {
                         ...options,
-                        format: imageToolkitMode === 'image-convert' ? format : 'original'
+                        format: 'original'
                     }
                 });
                 if (res.success) {
                     successCount++;
-                    addRecentFile(res.fileName, path.extname(res.outputPath).slice(1), res.outputPath);
+                    addRecentFile(res.fileName, window.app.getFileExtension(res.outputPath), res.outputPath);
                 }
             }
             showToast(`Successfully processed ${successCount} image(s).`, 'success');
@@ -4911,8 +4922,7 @@
     const imageToolkitDropzones = [
         { id: 'image-resize-dropzone', input: 'image-resize-input', btn: 'image-resize-browse-btn' },
         { id: 'image-compress-dropzone', input: 'image-compress-input', btn: 'image-compress-browse-btn' },
-        { id: 'image-watermark-dropzone', input: 'image-watermark-input', btn: 'image-watermark-browse-btn' },
-        { id: 'image-convert-dropzone', input: 'image-convert-input', btn: 'image-convert-browse-btn' }
+        { id: 'image-watermark-dropzone', input: 'image-watermark-input', btn: 'image-watermark-browse-btn' }
     ];
 
     imageToolkitDropzones.forEach(dz => {
@@ -4944,7 +4954,7 @@
     });
 
     // Image Toolkit Clear Buttons
-    ['resize', 'compress', 'watermark', 'convert'].forEach(mode => {
+    ['resize', 'compress', 'watermark'].forEach(mode => {
         document.getElementById(`image-${mode}-clear-btn`)?.addEventListener('click', clearImageToolkitFiles);
     });
 
@@ -4952,7 +4962,6 @@
     document.getElementById('image-process-resize-btn')?.addEventListener('click', processImageToolkit);
     document.getElementById('image-process-compress-btn')?.addEventListener('click', processImageToolkit);
     document.getElementById('image-process-watermark-btn')?.addEventListener('click', processImageToolkit);
-    document.getElementById('image-process-convert-btn')?.addEventListener('click', processImageToolkit);
 
     // Image Toolkit Sliders
     document.getElementById('image-compress-quality-slider')?.addEventListener('input', (e) => {
