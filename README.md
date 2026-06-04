@@ -11,7 +11,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/Platform-Windows-0078d7?style=flat-square&logo=windows" alt="Windows Platform">
-  <img src="https://img.shields.io/badge/Version-2.1-emerald?style=flat-square" alt="Version 2.1">
+  <img src="https://img.shields.io/badge/Version-2.2-emerald?style=flat-square" alt="Version 2.2">
   <img src="https://img.shields.io/badge/Built%20With-Electron-478a9c?style=flat-square&logo=electron" alt="Electron">
   <img src="https://img.shields.io/badge/Privacy-100%25%20Offline-success?style=flat-square" alt="100% Offline">
 </p>
@@ -59,6 +59,20 @@ Unified console for converting media, documents, and archives with optimized set
 #### 🎬 Conversion Walkthrough
 <p align="center">
   <img src="https://raw.githubusercontent.com/PRIYANSHVERMA-droid/ConvertHub-v2/main/assets/screenshots/File%20conversion%20walkthrough.gif" width="850" alt="Conversion Flow">
+</p>
+
+---
+
+### 🎨 Smart Image Toolkit
+An advanced offline studio to resize, crop, compress, format, and watermark images with real-time preview.
+
+| 🌘 Dark Theme | ☀️ Light Theme |
+| :---: | :---: |
+| ![Image Toolkit Dark](https://raw.githubusercontent.com/PRIYANSHVERMA-droid/ConvertHub-v2/main/assets/screenshots/Image%20Toolkit%20dark.png) | ![Image Toolkit Light](https://raw.githubusercontent.com/PRIYANSHVERMA-droid/ConvertHub-v2/main/assets/screenshots/Image%20Toolkit%20light.png) |
+
+#### 🖼 Image Processing Walkthrough
+<p align="center">
+  <img src="https://raw.githubusercontent.com/PRIYANSHVERMA-droid/ConvertHub-v2/main/assets/screenshots/Image%20Toolkit%20walkthrough.gif" width="850" alt="Image Processing Flow">
 </p>
 
 ---
@@ -147,6 +161,9 @@ ConvertHub v2
 │   │   ├ File Converter Ui dark.png
 │   │   ├ File Converter Ui light.png
 │   │   ├ File conversion walkthrough.gif
+│   │   ├ Image Toolkit dark.png
+│   │   ├ Image Toolkit light.png
+│   │   ├ Image Toolkit walkthrough.gif
 │   │   ├ PDF Toolkit Ui dark.png
 │   │   ├ PDF Toolkit Ui light.png
 │   │   ├ PDF Toolkit walkthrough.gif
