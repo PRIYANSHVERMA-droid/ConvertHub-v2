@@ -2540,6 +2540,202 @@
         }
     }
 
+    async function loadPdfToImgPages() {
+        if (!selectedPdfFile) return;
+        const previewSection = document.getElementById('pdf-to-img-preview-grid-section');
+        const grid = document.getElementById('pdf-to-img-preview-grid');
+        const totalPagesEl = document.getElementById('pdf-to-img-total-pages');
+        const selectedCountEl = document.getElementById('pdf-to-img-selected-count');
+        
+        if (!previewSection || !grid) return;
+        
+        previewSection.classList.remove('hidden');
+        grid.innerHTML = `
+            <div style="grid-column: 1/-1; display: flex; flex-direction: column; align-items: center; padding: 40px; gap: 15px; color: var(--text-muted);">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size: 28px; color: #f43f5e;"></i>
+                <span>Generating page thumbnails...</span>
+            </div>
+        `;
+        
+        try {
+            const pdfJs = window.pdfjsLib;
+            const pdfBytes = await getPdfDocumentBytes(selectedPdfFile);
+            const loadingTask = pdfJs.getDocument({
+                data: pdfBytes,
+                disableFontFace: false,
+                useSystemFonts: true
+            });
+            const pdf = await loadingTask.promise;
+            const totalPages = pdf.numPages;
+            
+            if (totalPagesEl) totalPagesEl.textContent = totalPages;
+            if (selectedCountEl) selectedCountEl.textContent = totalPages;
+            
+            if (pdfExtractRangeInput) {
+                pdfExtractRangeInput.value = `1-${totalPages}`;
+            }
+            
+            grid.innerHTML = '';
+            const selectedPages = new Set(Array.from({ length: totalPages }, (_, i) => i + 1));
+            
+            const updateRangeInputFromGrid = () => {
+                if (selectedPages.size === totalPages) {
+                    pdfExtractRangeInput.value = `1-${totalPages}`;
+                } else if (selectedPages.size === 0) {
+                    pdfExtractRangeInput.value = '';
+                } else {
+                    const sortedArr = Array.from(selectedPages).sort((a, b) => a - b);
+                    const ranges = [];
+                    let rangeStart = null;
+                    let rangeEnd = null;
+                    
+                    for (let i = 0; i < sortedArr.length; i++) {
+                        const cur = sortedArr[i];
+                        if (rangeStart === null) {
+                            rangeStart = cur;
+                            rangeEnd = cur;
+                        } else if (cur === rangeEnd + 1) {
+                            rangeEnd = cur;
+                        } else {
+                            if (rangeStart === rangeEnd) {
+                                ranges.push(`${rangeStart}`);
+                            } else {
+                                ranges.push(`${rangeStart}-${rangeEnd}`);
+                            }
+                            rangeStart = cur;
+                            rangeEnd = cur;
+                        }
+                    }
+                    if (rangeStart !== null) {
+                        if (rangeStart === rangeEnd) {
+                            ranges.push(`${rangeStart}`);
+                        } else {
+                            ranges.push(`${rangeStart}-${rangeEnd}`);
+                        }
+                    }
+                    pdfExtractRangeInput.value = ranges.join(', ');
+                }
+                if (selectedCountEl) selectedCountEl.textContent = selectedPages.size;
+            };
+
+            const syncCheckboxesFromTextInput = () => {
+                const rangeStr = pdfExtractRangeInput.value;
+                const activePages = parsePdfPageSelection('CUSTOM', rangeStr, totalPages);
+                selectedPages.clear();
+                
+                activePages.forEach(pageNum => {
+                    selectedPages.add(pageNum);
+                });
+                
+                grid.querySelectorAll('.pdf-to-img-card').forEach((card) => {
+                    const pageNum = parseInt(card.dataset.pageNum, 10);
+                    const checkbox = card.querySelector('input[type="checkbox"]');
+                    if (checkbox) {
+                        checkbox.checked = selectedPages.has(pageNum);
+                        card.classList.toggle('selected', selectedPages.has(pageNum));
+                    }
+                });
+                if (selectedCountEl) selectedCountEl.textContent = selectedPages.size;
+            };
+
+            pdfExtractRangeInput.removeEventListener('input', syncCheckboxesFromTextInput);
+            pdfExtractRangeInput.addEventListener('input', syncCheckboxesFromTextInput);
+
+            for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+                const page = await pdf.getPage(pageNum);
+                const viewport = page.getViewport({ scale: 1 });
+                const scale = 110 / viewport.width;
+                const scaledViewport = page.getViewport({ scale });
+
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.width = Math.round(scaledViewport.width);
+                canvas.height = Math.round(scaledViewport.height);
+
+                await page.render({
+                    canvasContext: context,
+                    viewport: scaledViewport
+                }).promise;
+
+                const card = document.createElement('div');
+                card.className = 'pdf-organize-card pdf-to-img-card selected';
+                card.dataset.pageNum = pageNum;
+                card.style.cursor = 'pointer';
+                card.style.position = 'relative';
+
+                const thumbWrap = document.createElement('div');
+                thumbWrap.className = 'pdf-organize-thumb-wrap';
+                thumbWrap.appendChild(canvas);
+                
+                const checkboxWrap = document.createElement('div');
+                checkboxWrap.style.position = 'absolute';
+                checkboxWrap.style.top = '8px';
+                checkboxWrap.style.left = '8px';
+                checkboxWrap.style.zIndex = '10';
+                checkboxWrap.innerHTML = `<input type="checkbox" checked style="width: 18px; height: 18px; cursor: pointer; accent-color: #f43f5e;">`;
+                
+                const checkbox = checkboxWrap.querySelector('input');
+
+                const metaRow = document.createElement('div');
+                metaRow.className = 'pdf-organize-meta';
+                metaRow.innerHTML = `<span>Page ${pageNum}</span>`;
+
+                card.appendChild(checkboxWrap);
+                card.appendChild(thumbWrap);
+                card.appendChild(metaRow);
+                
+                const togglePage = (e) => {
+                    if (e.target !== checkbox) {
+                        checkbox.checked = !checkbox.checked;
+                    }
+                    card.classList.toggle('selected', checkbox.checked);
+                    if (checkbox.checked) {
+                        selectedPages.add(pageNum);
+                    } else {
+                        selectedPages.delete(pageNum);
+                    }
+                    if (pdfExtractRangeType && pdfExtractRangeType.value !== 'CUSTOM') {
+                        pdfExtractRangeType.value = 'CUSTOM';
+                        pdfExtractRangeGroup?.classList.remove('hidden');
+                    }
+                    updateRangeInputFromGrid();
+                };
+                
+                card.addEventListener('click', togglePage);
+                grid.appendChild(card);
+                page.cleanup?.();
+            }
+
+            document.getElementById('pdf-to-img-select-all')?.addEventListener('click', () => {
+                for (let i = 1; i <= totalPages; i++) selectedPages.add(i);
+                grid.querySelectorAll('.pdf-to-img-card').forEach(c => {
+                    c.classList.add('selected');
+                    c.querySelector('input').checked = true;
+                });
+                updateRangeInputFromGrid();
+            });
+
+            document.getElementById('pdf-to-img-deselect-all')?.addEventListener('click', () => {
+                selectedPages.clear();
+                grid.querySelectorAll('.pdf-to-img-card').forEach(c => {
+                    c.classList.remove('selected');
+                    c.querySelector('input').checked = false;
+                });
+                updateRangeInputFromGrid();
+            });
+
+            if (pdf.destroy) await pdf.destroy().catch(() => undefined);
+            
+            if (pdfDetailMeta) {
+                const mb = (selectedPdfFile.size / (1024 * 1024)).toFixed(2);
+                pdfDetailMeta.innerHTML = `${mb} MB &bull; ${totalPages} pages`;
+            }
+        } catch (err) {
+            console.error('Failed to load PDF to images grid:', err);
+            grid.innerHTML = `<span style="grid-column: 1/-1; color: #ef4444; text-align:center;">Failed to render page previews: ${err.message}</span>`;
+        }
+    }
+
     async function setPdfExtractFile(files) {
         const [file] = normalizePdfSelectedFiles(files, ['pdf']);
         if (!file) {
@@ -2549,10 +2745,12 @@
 
         selectedPdfFile = file;
         if (pdfDetailName) pdfDetailName.textContent = file.name;
-        if (pdfDetailMeta) pdfDetailMeta.textContent = `${formatBytes(file.size)} &bull; Ready to extract`;
+        if (pdfDetailMeta) pdfDetailMeta.textContent = `${formatBytes(file.size)} &bull; Loading...`;
         pdfFileDropzone?.classList.add('hidden');
         pdfFileDetails?.classList.remove('hidden');
         updatePdfButtons();
+        
+        await loadPdfToImgPages();
     }
 
     function clearPdfExtractFile() {
@@ -2562,6 +2760,9 @@
         }
         pdfFileDetails?.classList.add('hidden');
         pdfFileDropzone?.classList.remove('hidden');
+        document.getElementById('pdf-to-img-preview-grid-section')?.classList.add('hidden');
+        const grid = document.getElementById('pdf-to-img-preview-grid');
+        if (grid) grid.innerHTML = '';
         updatePdfButtons();
     }
 
@@ -4472,6 +4673,12 @@
     // ─── Image Toolkit Controller ──────────────────────────────────────────
     let imageToolkitFiles = [];
     let imageToolkitMode = 'image-resize';
+    
+    let imageResizeRotate = 0;
+    let imageResizeFlipH = false;
+    let imageResizeFlipV = false;
+    let imageWatermarkLogoFile = null;
+    let imagePreviewOrig = false;
 
     const imageTabs = Array.from(document.querySelectorAll('#image-toolkit-workspace .pdf-tab'));
     const imagePanels = {
@@ -4491,6 +4698,7 @@
         Object.keys(imagePanels).forEach(m => imagePanels[m]?.classList.toggle('hidden', m !== mode));
         Object.keys(imageSidebars).forEach(m => imageSidebars[m]?.classList.toggle('hidden', m !== mode));
         updateImageToolkitButtons();
+        renderImageToolkitPreview();
     }
 
     function updateImageToolkitButtons() {
@@ -4498,6 +4706,301 @@
         document.getElementById('image-process-resize-btn').disabled = !hasFiles || imageToolkitMode !== 'image-resize';
         document.getElementById('image-process-compress-btn').disabled = !hasFiles || imageToolkitMode !== 'image-compress';
         document.getElementById('image-process-watermark-btn').disabled = !hasFiles || imageToolkitMode !== 'image-watermark';
+    }
+
+    async function renderImageToolkitPreview() {
+        const modes = ['resize', 'compress', 'watermark'];
+        modes.forEach(m => {
+            const btnDiff = document.getElementById(`image-${m}-preview-mode-diff`);
+            const btnOrig = document.getElementById(`image-${m}-preview-mode-orig`);
+            if (btnDiff && btnOrig) {
+                btnDiff.classList.toggle('active', !imagePreviewOrig);
+                btnOrig.classList.toggle('active', imagePreviewOrig);
+            }
+        });
+
+        if (imageToolkitFiles.length === 0) {
+            modes.forEach(m => {
+                document.getElementById(`image-${m}-preview-section`)?.classList.add('hidden');
+            });
+            return;
+        }
+
+        const modeSuffix = imageToolkitMode.split('-')[1];
+        modes.forEach(m => {
+            const sec = document.getElementById(`image-${m}-preview-section`);
+            sec?.classList.toggle('hidden', m !== modeSuffix);
+        });
+
+        const canvas = document.getElementById(`image-${modeSuffix}-preview-canvas`);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+
+        try {
+            const firstFile = imageToolkitFiles[0];
+            const img = new Image();
+            img.src = `converthub-media://local-file/?path=${encodeURIComponent(firstFile.path)}`;
+            await new Promise((resolve, reject) => {
+                img.onload = resolve;
+                img.onerror = reject;
+            });
+
+            let w = img.width;
+            let h = img.height;
+            if (imageResizeRotate === 90 || imageResizeRotate === 270) {
+                w = img.height;
+                h = img.width;
+            }
+
+            let targetWidth = w;
+            let targetHeight = h;
+
+            if (imageToolkitMode === 'image-resize') {
+                const rWidth = parseInt(document.getElementById('image-resize-width').value, 10) || null;
+                const rHeight = parseInt(document.getElementById('image-resize-height').value, 10) || null;
+                const fit = document.getElementById('image-resize-fit').value;
+
+                if (rWidth && rHeight) {
+                    if (fit === 'inside') {
+                        const ratio = Math.min(rWidth / w, rHeight / h);
+                        targetWidth = Math.round(w * ratio);
+                        targetHeight = Math.round(h * ratio);
+                    } else if (fit === 'outside') {
+                        const ratio = Math.max(rWidth / w, rHeight / h);
+                        targetWidth = Math.round(w * ratio);
+                        targetHeight = Math.round(h * ratio);
+                    } else {
+                        targetWidth = rWidth;
+                        targetHeight = rHeight;
+                    }
+                } else if (rWidth) {
+                    const ratio = rWidth / w;
+                    targetWidth = rWidth;
+                    targetHeight = Math.round(h * ratio);
+                } else if (rHeight) {
+                    const ratio = rHeight / h;
+                    targetWidth = Math.round(w * ratio);
+                    targetHeight = rHeight;
+                }
+            }
+
+            const maxSide = 600;
+            let drawScale = 1;
+            if (targetWidth > maxSide || targetHeight > maxSide) {
+                drawScale = maxSide / Math.max(targetWidth, targetHeight);
+            }
+
+            canvas.width = Math.round(targetWidth * drawScale);
+            canvas.height = Math.round(targetHeight * drawScale);
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+
+            if (imagePreviewOrig) {
+                const scaleX = canvas.width / img.width;
+                const scaleY = canvas.height / img.height;
+                const scaleFit = Math.min(scaleX, scaleY);
+                const dw = img.width * scaleFit;
+                const dh = img.height * scaleFit;
+                const dx = (canvas.width - dw) / 2;
+                const dy = (canvas.height - dh) / 2;
+                ctx.drawImage(img, dx, dy, dw, dh);
+                ctx.restore();
+                return;
+            }
+
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+
+            let origW = img.width;
+            let origH = img.height;
+            if (imageResizeRotate === 90 || imageResizeRotate === 270) {
+                origW = img.height;
+                origH = img.width;
+            }
+            tempCanvas.width = origW;
+            tempCanvas.height = origH;
+
+            tempCtx.translate(origW / 2, origH / 2);
+            if (imageResizeRotate !== 0) {
+                tempCtx.rotate((imageResizeRotate * Math.PI) / 180);
+            }
+            tempCtx.scale(imageResizeFlipH ? -1 : 1, imageResizeFlipV ? -1 : 1);
+            tempCtx.drawImage(img, -img.width / 2, -img.height / 2);
+
+            const fit = document.getElementById('image-resize-fit')?.value || 'inside';
+            const bgColor = document.getElementById('image-resize-bg-hex')?.value || '#000000';
+
+            if (fit === 'contain') {
+                ctx.fillStyle = bgColor;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            let dw = canvas.width;
+            let dh = canvas.height;
+            let dx = 0;
+            let dy = 0;
+
+            if (fit === 'inside' || fit === 'contain') {
+                const ratioX = canvas.width / tempCanvas.width;
+                const ratioY = canvas.height / tempCanvas.height;
+                const scaleFit = Math.min(ratioX, ratioY);
+                dw = tempCanvas.width * scaleFit;
+                dh = tempCanvas.height * scaleFit;
+                dx = (canvas.width - dw) / 2;
+                dy = (canvas.height - dh) / 2;
+            } else if (fit === 'cover') {
+                const ratioX = canvas.width / tempCanvas.width;
+                const ratioY = canvas.height / tempCanvas.height;
+                const scaleFit = Math.max(ratioX, ratioY);
+                dw = tempCanvas.width * scaleFit;
+                dh = tempCanvas.height * scaleFit;
+                dx = (canvas.width - dw) / 2;
+                dy = (canvas.height - dh) / 2;
+            }
+
+            ctx.drawImage(tempCanvas, dx, dy, dw, dh);
+            ctx.restore();
+
+            if (imageToolkitMode === 'image-compress') {
+                const quality = parseInt(document.getElementById('image-compress-quality-slider').value, 10);
+                const targetFormat = document.getElementById('image-compress-format').value;
+                const originalSize = firstFile.size;
+
+                let factor = 1.0;
+                const format = targetFormat === 'original' ? firstFile.name.split('.').pop().toLowerCase() : targetFormat;
+
+                if (format === 'jpg' || format === 'jpeg') {
+                    factor = 0.15 + (quality / 100) * 0.45;
+                } else if (format === 'webp') {
+                    factor = 0.10 + (quality / 100) * 0.35;
+                } else if (format === 'avif') {
+                    factor = 0.05 + (quality / 100) * 0.25;
+                } else if (format === 'png') {
+                    factor = 0.85;
+                }
+
+                const estSize = Math.round(originalSize * factor);
+                const savingsPercent = Math.max(0, Math.round(((originalSize - estSize) / originalSize) * 100));
+
+                const estEl = document.getElementById('image-compress-estimate');
+                if (estEl) estEl.textContent = `${formatBytes(estSize)} (-${savingsPercent}%)`;
+                const detailsEl = document.getElementById('image-compress-details');
+                if (detailsEl) {
+                    detailsEl.innerHTML = `Original: <strong>${formatBytes(originalSize)}</strong> • Estimated savings based on ${format.toUpperCase()} formatting at ${quality}% quality.`;
+                }
+            }
+
+            if (imageToolkitMode === 'image-watermark') {
+                const type = document.getElementById('image-watermark-type').value;
+                const opacity = Number(document.getElementById('image-watermark-opacity-slider').value) / 100;
+                const placement = document.getElementById('image-watermark-placement').value;
+
+                ctx.save();
+                ctx.globalAlpha = opacity;
+
+                if (type === 'text') {
+                    const text = document.getElementById('image-watermark-text').value || '© ConvertHub';
+                    const scaleVal = Number(document.getElementById('image-watermark-scale-slider').value) / 100;
+                    const color = document.getElementById('image-watermark-color').value || '#ffffff';
+                    const rotation = Number(document.getElementById('image-watermark-rotation-slider').value) * Math.PI / 180;
+                    const font = document.getElementById('image-watermark-font').value;
+
+                    let fontStack = 'Arial';
+                    if (font === 'serif') fontStack = 'Times New Roman, Georgia';
+                    else if (font === 'monospace') fontStack = 'Courier New, monospace';
+                    else if (font === 'cursive') fontStack = 'Brush Script MT, cursive';
+
+                    const fontSize = Math.max(10, Math.round(canvas.width * scaleVal));
+                    ctx.fillStyle = color;
+                    ctx.font = `bold ${fontSize}px ${fontStack}`;
+                    ctx.textBaseline = 'middle';
+                    ctx.textAlign = 'center';
+
+                    const textWidth = ctx.measureText(text).width;
+                    const textHeight = fontSize;
+
+                    if (placement === 'TILED') {
+                        ctx.translate(canvas.width / 2, canvas.height / 2);
+                        ctx.rotate(rotation);
+                        ctx.translate(-canvas.width / 2, -canvas.height / 2);
+                        const stepX = textWidth + 80;
+                        const stepY = textHeight + 80;
+                        for (let x = -canvas.width; x < canvas.width * 2; x += stepX) {
+                            for (let y = -canvas.height; y < canvas.height * 2; y += stepY) {
+                                ctx.fillText(text, x, y);
+                            }
+                        }
+                    } else {
+                        let x = canvas.width / 2;
+                        let y = canvas.height / 2;
+
+                        const padX = Math.max(10, canvas.width * 0.03);
+                        const padY = Math.max(10, canvas.height * 0.03);
+
+                        if (placement === 'TOP_LEFT') {
+                            x = textWidth / 2 + padX; y = textHeight / 2 + padY;
+                        } else if (placement === 'TOP_RIGHT') {
+                            x = canvas.width - textWidth / 2 - padX; y = textHeight / 2 + padY;
+                        } else if (placement === 'BOTTOM_LEFT') {
+                            x = textWidth / 2 + padX; y = canvas.height - textHeight / 2 - padY;
+                        } else if (placement === 'BOTTOM_RIGHT') {
+                            x = canvas.width - textWidth / 2 - padX; y = canvas.height - textHeight / 2 - padY;
+                        }
+
+                        ctx.translate(x, y);
+                        ctx.rotate(rotation);
+                        ctx.fillText(text, 0, 0);
+                    }
+                } else if (type === 'image' && imageWatermarkLogoFile) {
+                    const logoScale = Number(document.getElementById('image-watermark-logo-scale-slider').value) / 100;
+                    const imgLogo = new Image();
+                    imgLogo.src = imageWatermarkLogoFile.url;
+                    await new Promise((resolve, reject) => {
+                        imgLogo.onload = resolve;
+                        imgLogo.onerror = reject;
+                    });
+
+                    let lw = canvas.width * logoScale;
+                    let lh = imgLogo.height * (lw / imgLogo.width);
+
+                    if (lh > canvas.height * 0.9) {
+                        lh = canvas.height * 0.9;
+                        lw = imgLogo.width * (lh / imgLogo.height);
+                    }
+
+                    if (placement === 'TILED') {
+                        const stepX = lw + 80;
+                        const stepY = lh + 80;
+                        for (let x = -canvas.width; x < canvas.width * 2; x += stepX) {
+                            for (let y = -canvas.height; y < canvas.height * 2; y += stepY) {
+                                ctx.drawImage(imgLogo, x, y, lw, lh);
+                            }
+                        }
+                    } else {
+                        let x = (canvas.width - lw) / 2;
+                        let y = (canvas.height - lh) / 2;
+
+                        const pad = 15;
+                        if (placement === 'TOP_LEFT') {
+                            x = pad; y = pad;
+                        } else if (placement === 'TOP_RIGHT') {
+                            x = canvas.width - lw - pad; y = pad;
+                        } else if (placement === 'BOTTOM_LEFT') {
+                            x = pad; y = canvas.height - lh - pad;
+                        } else if (placement === 'BOTTOM_RIGHT') {
+                            x = canvas.width - lw - pad; y = canvas.height - lh - pad;
+                        }
+
+                        ctx.drawImage(imgLogo, x, y, lw, lh);
+                    }
+                }
+                ctx.restore();
+            }
+
+        } catch (err) {
+            console.error('Image preview rendering failed:', err);
+        }
     }
 
     async function addImageToolkitFiles(files) {
@@ -4569,6 +5072,7 @@
             }
         });
         updateImageToolkitButtons();
+        renderImageToolkitPreview();
     }
 
     function clearImageToolkitFiles() {
@@ -4591,17 +5095,45 @@
             options.resize = {
                 width: document.getElementById('image-resize-width').value || null,
                 height: document.getElementById('image-resize-height').value || null,
-                fit: 'inside' // Always maintain aspect if only one dimension given
+                fit: document.getElementById('image-resize-fit').value || 'inside',
+                background: document.getElementById('image-resize-bg-hex').value || '#000000'
             };
+            options.rotate = imageResizeRotate;
+            options.flipH = imageResizeFlipH;
+            options.flipV = imageResizeFlipV;
         } else if (imageToolkitMode === 'image-compress') {
+            const formatVal = document.getElementById('image-compress-format').value;
+            if (formatVal !== 'original') {
+                options.format = formatVal;
+            }
             options.quality = parseInt(document.getElementById('image-compress-quality-slider').value, 10);
             options.stripMetadata = document.getElementById('image-compress-strip').checked;
         } else if (imageToolkitMode === 'image-watermark') {
-            options.watermark = {
-                type: 'text',
-                text: document.getElementById('image-watermark-text').value || '© ConvertHub',
-                opacity: parseInt(document.getElementById('image-watermark-opacity-slider').value, 10) / 100
-            };
+            const wmType = document.getElementById('image-watermark-type').value;
+            if (wmType === 'text') {
+                options.watermark = {
+                    type: 'text',
+                    text: document.getElementById('image-watermark-text').value || '© ConvertHub',
+                    font: document.getElementById('image-watermark-font').value || 'sans-serif',
+                    color: document.getElementById('image-watermark-color').value || '#ffffff',
+                    scale: Number(document.getElementById('image-watermark-scale-slider').value) / 100,
+                    rotation: parseInt(document.getElementById('image-watermark-rotation-slider').value, 10) || 0,
+                    placement: document.getElementById('image-watermark-placement').value || 'CENTER',
+                    opacity: parseInt(document.getElementById('image-watermark-opacity-slider').value, 10) / 100
+                };
+            } else if (wmType === 'image') {
+                if (!imageWatermarkLogoFile) {
+                    showToast('Please select a logo image first.', 'warning');
+                    return;
+                }
+                options.watermark = {
+                    type: 'image',
+                    imagePath: imageWatermarkLogoFile.path,
+                    scale: Number(document.getElementById('image-watermark-logo-scale-slider').value) / 100,
+                    placement: document.getElementById('image-watermark-placement').value || 'CENTER',
+                    opacity: parseInt(document.getElementById('image-watermark-opacity-slider').value, 10) / 100
+                };
+            }
         }
 
         const btnId = `image-process-${imageToolkitMode.split('-')[1]}-btn`;
@@ -4966,6 +5498,133 @@
         if (folder) {
             document.getElementById('image-output-folder-input').value = folder;
         }
+    });
+
+    // New Image Toolkit Advanced Event Listeners
+    document.getElementById('image-resize-preset')?.addEventListener('change', (e) => {
+        const preset = e.target.value;
+        const widthInput = document.getElementById('image-resize-width');
+        const heightInput = document.getElementById('image-resize-height');
+        if (preset === 'custom') {
+            widthInput.disabled = false;
+            heightInput.disabled = false;
+        } else {
+            const [w, h] = preset.split('x').map(Number);
+            widthInput.value = w;
+            heightInput.value = h;
+            widthInput.disabled = true;
+            heightInput.disabled = true;
+        }
+        renderImageToolkitPreview();
+    });
+
+    document.getElementById('image-resize-width')?.addEventListener('input', renderImageToolkitPreview);
+    document.getElementById('image-resize-height')?.addEventListener('input', renderImageToolkitPreview);
+    
+    document.getElementById('image-resize-fit')?.addEventListener('change', (e) => {
+        const fit = e.target.value;
+        document.getElementById('image-resize-bg-group')?.classList.toggle('hidden', fit !== 'contain');
+        renderImageToolkitPreview();
+    });
+
+    document.getElementById('image-resize-bg-color')?.addEventListener('input', (e) => {
+        document.getElementById('image-resize-bg-hex').value = e.target.value;
+        renderImageToolkitPreview();
+    });
+    document.getElementById('image-resize-bg-hex')?.addEventListener('input', (e) => {
+        let hex = e.target.value;
+        if (!hex.startsWith('#')) hex = '#' + hex;
+        if (hex.length === 7) {
+            document.getElementById('image-resize-bg-color').value = hex;
+        }
+        renderImageToolkitPreview();
+    });
+
+    document.getElementById('image-btn-rotate-ccw')?.addEventListener('click', () => {
+        imageResizeRotate = (imageResizeRotate - 90 + 360) % 360;
+        renderImageToolkitPreview();
+    });
+    document.getElementById('image-btn-rotate-cw')?.addEventListener('click', () => {
+        imageResizeRotate = (imageResizeRotate + 90) % 360;
+        renderImageToolkitPreview();
+    });
+    document.getElementById('image-btn-flip-h')?.addEventListener('click', (e) => {
+        imageResizeFlipH = !imageResizeFlipH;
+        e.currentTarget.classList.toggle('active', imageResizeFlipH);
+        renderImageToolkitPreview();
+    });
+    document.getElementById('image-btn-flip-v')?.addEventListener('click', (e) => {
+        imageResizeFlipV = !imageResizeFlipV;
+        e.currentTarget.classList.toggle('active', imageResizeFlipV);
+        renderImageToolkitPreview();
+    });
+
+    document.getElementById('image-compress-format')?.addEventListener('change', renderImageToolkitPreview);
+    document.getElementById('image-compress-quality-slider')?.addEventListener('input', renderImageToolkitPreview);
+
+    document.getElementById('image-watermark-type')?.addEventListener('change', (e) => {
+        const isImage = e.target.value === 'image';
+        document.getElementById('image-watermark-text-group')?.classList.toggle('hidden', isImage);
+        document.getElementById('image-watermark-image-group')?.classList.toggle('hidden', !isImage);
+        renderImageToolkitPreview();
+    });
+
+    document.getElementById('image-watermark-text')?.addEventListener('input', renderImageToolkitPreview);
+    document.getElementById('image-watermark-font')?.addEventListener('change', renderImageToolkitPreview);
+    document.getElementById('image-watermark-placement')?.addEventListener('change', renderImageToolkitPreview);
+    
+    document.getElementById('image-watermark-opacity-slider')?.addEventListener('input', renderImageToolkitPreview);
+    
+    document.getElementById('image-watermark-scale-slider')?.addEventListener('input', (e) => {
+        document.getElementById('image-watermark-scale-val').textContent = `${e.target.value}%`;
+        renderImageToolkitPreview();
+    });
+    document.getElementById('image-watermark-rotation-slider')?.addEventListener('input', (e) => {
+        document.getElementById('image-watermark-rotation-val').textContent = `${e.target.value}°`;
+        renderImageToolkitPreview();
+    });
+    document.getElementById('image-watermark-color')?.addEventListener('input', (e) => {
+        document.getElementById('image-watermark-color-hex').value = e.target.value;
+        renderImageToolkitPreview();
+    });
+    document.getElementById('image-watermark-color-hex')?.addEventListener('input', (e) => {
+        let hex = e.target.value;
+        if (!hex.startsWith('#')) hex = '#' + hex;
+        if (hex.length === 7) {
+            document.getElementById('image-watermark-color').value = hex;
+        }
+        renderImageToolkitPreview();
+    });
+
+    document.getElementById('image-watermark-logo-browse-btn')?.addEventListener('click', async () => {
+        const files = await window.app?.selectFiles?.();
+        if (files && files.length > 0) {
+            const logoPath = files[0];
+            const name = logoPath.split('\\').pop().split('/').pop();
+            imageWatermarkLogoFile = {
+                name,
+                path: logoPath,
+                url: `converthub-media://local-file/?path=${encodeURIComponent(logoPath)}`
+            };
+            document.getElementById('image-watermark-logo-path').value = name;
+            renderImageToolkitPreview();
+        }
+    });
+    document.getElementById('image-watermark-logo-scale-slider')?.addEventListener('input', (e) => {
+        document.getElementById('image-watermark-logo-scale-val').textContent = `${e.target.value}%`;
+        renderImageToolkitPreview();
+    });
+
+    // Preview Mode Toggles
+    ['resize', 'compress', 'watermark'].forEach(mode => {
+        document.getElementById(`image-${mode}-preview-mode-diff`)?.addEventListener('click', () => {
+            imagePreviewOrig = false;
+            renderImageToolkitPreview();
+        });
+        document.getElementById(`image-${mode}-preview-mode-orig`)?.addEventListener('click', () => {
+            imagePreviewOrig = true;
+            renderImageToolkitPreview();
+        });
     });
 
     init();

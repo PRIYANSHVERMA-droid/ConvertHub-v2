@@ -342,6 +342,18 @@
                                     <button class="icon-btn no-drag pdf-remove-file-btn" id="pdf-remove-file-btn" title="Remove PDF"><i class="fa-solid fa-xmark"></i></button>
                                 </div>
                             </div>
+                            
+                            <!-- Visual Page Selection for PDF to Images -->
+                            <div class="pdf-image-grid-section hidden" id="pdf-to-img-preview-grid-section" style="margin-top: 25px;">
+                                <div class="grid-header">
+                                    <h4>Visual Page Selection (<span id="pdf-to-img-selected-count">0</span> / <span id="pdf-to-img-total-pages">0</span> selected)</h4>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button class="outline-btn no-drag" id="pdf-to-img-select-all" type="button" style="padding: 4px 8px; font-size: 11px;"><i class="fa-solid fa-check-double"></i> Select All</button>
+                                        <button class="outline-btn no-drag" id="pdf-to-img-deselect-all" type="button" style="padding: 4px 8px; font-size: 11px;"><i class="fa-solid fa-xmark"></i> Clear All</button>
+                                    </div>
+                                </div>
+                                <div class="pdf-uploaded-list" id="pdf-to-img-preview-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 15px; padding: 15px 0; max-height: 250px; overflow-y: auto; border: 1px solid var(--panel-border); border-radius: 12px; padding: 15px; background: rgba(0,0,0,0.15);"></div>
+                            </div>
                         </div>
 
                         <div id="panel-merge-pdf" class="pdf-panel hidden">
@@ -902,6 +914,18 @@
                                 </div>
                                 <div class="pdf-uploaded-list" id="image-resize-grid"></div>
                             </div>
+                            
+                            <!-- Live Resize Preview -->
+                            <div class="image-preview-section hidden" id="image-resize-preview-section" style="margin-top: 25px; display: flex; flex-direction: column; align-items: center; gap: 12px; background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 12px; padding: 20px; width: 100%;">
+                                <h4 style="align-self: flex-start; color: var(--text-main); margin: 0 0 10px 0;"><i class="fa-regular fa-eye"></i> Live Preview (Image 1)</h4>
+                                <div class="watermark-preview-container" style="position: relative; border-radius: 8px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.4); max-width: 100%; max-height: 300px; background: #1a1d29; display: flex; justify-content: center; align-items: center; width: 100%;">
+                                    <canvas id="image-resize-preview-canvas" style="display: block; max-width: 100%; max-height: 300px; object-fit: contain;"></canvas>
+                                </div>
+                                <div class="preview-mode-bar" style="display: flex; gap: 10px; width: 100%; justify-content: center; margin-top: 10px;">
+                                    <button type="button" class="outline-btn active no-drag" id="image-resize-preview-mode-diff" style="padding: 6px 12px; font-size: 11px;">Active Settings</button>
+                                    <button type="button" class="outline-btn no-drag" id="image-resize-preview-mode-orig" style="padding: 6px 12px; font-size: 11px;">Original</button>
+                                </div>
+                            </div>
                         </section>
 
                         <!-- Compress Panel -->
@@ -924,6 +948,18 @@
                                     <button class="clear-btn no-drag" id="image-compress-clear-btn"><i class="fa-solid fa-trash-can"></i> Clear All</button>
                                 </div>
                                 <div class="pdf-uploaded-list" id="image-compress-grid"></div>
+                            </div>
+
+                            <!-- Live Compress Preview -->
+                            <div class="image-preview-section hidden" id="image-compress-preview-section" style="margin-top: 25px; display: flex; flex-direction: column; align-items: center; gap: 12px; background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 12px; padding: 20px; width: 100%;">
+                                <h4 style="align-self: flex-start; color: var(--text-main); margin: 0 0 10px 0;"><i class="fa-regular fa-eye"></i> Live Preview (Image 1)</h4>
+                                <div class="watermark-preview-container" style="position: relative; border-radius: 8px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.4); max-width: 100%; max-height: 300px; background: #1a1d29; display: flex; justify-content: center; align-items: center; width: 100%;">
+                                    <canvas id="image-compress-preview-canvas" style="display: block; max-width: 100%; max-height: 300px; object-fit: contain;"></canvas>
+                                </div>
+                                <div class="preview-mode-bar" style="display: flex; gap: 10px; width: 100%; justify-content: center; margin-top: 10px;">
+                                    <button type="button" class="outline-btn active no-drag" id="image-compress-preview-mode-diff" style="padding: 6px 12px; font-size: 11px;">Active Settings</button>
+                                    <button type="button" class="outline-btn no-drag" id="image-compress-preview-mode-orig" style="padding: 6px 12px; font-size: 11px;">Original</button>
+                                </div>
                             </div>
                         </section>
 
@@ -948,6 +984,18 @@
                                 </div>
                                 <div class="pdf-uploaded-list" id="image-watermark-grid"></div>
                             </div>
+
+                            <!-- Live Watermark Preview -->
+                            <div class="image-preview-section hidden" id="image-watermark-preview-section" style="margin-top: 25px; display: flex; flex-direction: column; align-items: center; gap: 12px; background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 12px; padding: 20px; width: 100%;">
+                                <h4 style="align-self: flex-start; color: var(--text-main); margin: 0 0 10px 0;"><i class="fa-regular fa-eye"></i> Live Preview (Image 1)</h4>
+                                <div class="watermark-preview-container" style="position: relative; border-radius: 8px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.4); max-width: 100%; max-height: 300px; background: #1a1d29; display: flex; justify-content: center; align-items: center; width: 100%;">
+                                    <canvas id="image-watermark-preview-canvas" style="display: block; max-width: 100%; max-height: 300px; object-fit: contain;"></canvas>
+                                </div>
+                                <div class="preview-mode-bar" style="display: flex; gap: 10px; width: 100%; justify-content: center; margin-top: 10px;">
+                                    <button type="button" class="outline-btn active no-drag" id="image-watermark-preview-mode-diff" style="padding: 6px 12px; font-size: 11px;">Active Settings</button>
+                                    <button type="button" class="outline-btn no-drag" id="image-watermark-preview-mode-orig" style="padding: 6px 12px; font-size: 11px;">Original</button>
+                                </div>
+                            </div>
                         </section>
                     </main>
 
@@ -959,6 +1007,17 @@
                             </div>
                             <div class="settings-form-scroll">
                                 <div class="form-group">
+                                    <label>Preset Sizing</label>
+                                    <select id="image-resize-preset" class="glass-input no-drag">
+                                        <option value="custom" selected>Custom (Manual)</option>
+                                        <option value="1920x1080">Full HD (1920x1080) 16:9</option>
+                                        <option value="1280x720">HD (1280x720) 16:9</option>
+                                        <option value="1080x1080">Instagram Square (1080x1080) 1:1</option>
+                                        <option value="1080x1350">Instagram Portrait (1080x1350) 4:5</option>
+                                        <option value="800x600">Standard (800x600) 4:3</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
                                     <label>Target Width (px)</label>
                                     <input type="number" id="image-resize-width" class="glass-input no-drag" placeholder="Auto">
                                 </div>
@@ -966,12 +1025,31 @@
                                     <label>Target Height (px)</label>
                                     <input type="number" id="image-resize-height" class="glass-input no-drag" placeholder="Auto">
                                 </div>
-                                <label class="toggle-row no-drag">
-                                    <div>
-                                        <span class="toggle-title">Maintain aspect ratio</span>
+                                <div class="form-group">
+                                    <label>Resize Fit Mode</label>
+                                    <select id="image-resize-fit" class="glass-input no-drag">
+                                        <option value="inside" selected>Inside (Preserve aspect)</option>
+                                        <option value="cover">Cover (Crop to fill)</option>
+                                        <option value="contain">Contain (Letterbox/Pillarbox)</option>
+                                        <option value="fill">Fill (Stretch to fit)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group hidden" id="image-resize-bg-group">
+                                    <label>Background Color</label>
+                                    <div class="color-picker-wrapper" style="display: flex; gap: 10px;">
+                                        <input type="color" id="image-resize-bg-color" value="#000000" style="width: 40px; height: 35px; border-radius: 6px; border: 1px solid var(--panel-border); background: transparent;">
+                                        <input type="text" id="image-resize-bg-hex" value="#000000" class="glass-input no-drag" placeholder="#000000" style="flex: 1; font-size: 13px;">
                                     </div>
-                                    <input id="image-resize-aspect" type="checkbox" checked>
-                                </label>
+                                </div>
+                                <div class="form-group" style="margin-top: 15px;">
+                                    <label>Transformations</label>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                        <button type="button" class="outline-btn no-drag" id="image-btn-rotate-ccw" title="Rotate Left 90°" style="flex: 1; min-width: 45px; padding: 6px; font-size: 11px;"><i class="fa-solid fa-rotate-left"></i> -90°</button>
+                                        <button type="button" class="outline-btn no-drag" id="image-btn-rotate-cw" title="Rotate Right 90°" style="flex: 1; min-width: 45px; padding: 6px; font-size: 11px;"><i class="fa-solid fa-rotate-right"></i> +90°</button>
+                                        <button type="button" class="outline-btn no-drag" id="image-btn-flip-h" title="Flip Horizontally" style="flex: 1; min-width: 45px; padding: 6px; font-size: 11px;"><i class="fa-solid fa-arrows-left-right"></i> H-Flip</button>
+                                        <button type="button" class="outline-btn no-drag" id="image-btn-flip-v" title="Flip Vertically" style="flex: 1; min-width: 45px; padding: 6px; font-size: 11px;"><i class="fa-solid fa-arrows-up-down"></i> V-Flip</button>
+                                    </div>
+                                </div>
                             </div>
                             <div class="settings-footer-bar">
                                 <button id="image-process-resize-btn" class="primary-btn glow-btn no-drag" disabled>
@@ -987,6 +1065,16 @@
                             </div>
                             <div class="settings-form-scroll">
                                 <div class="form-group">
+                                    <label>Convert Format</label>
+                                    <select id="image-compress-format" class="glass-input no-drag">
+                                        <option value="original" selected>Same as source</option>
+                                        <option value="jpg">JPEG (.jpg)</option>
+                                        <option value="png">PNG (.png)</option>
+                                        <option value="webp">WebP (.webp)</option>
+                                        <option value="avif">AVIF (.avif)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
                                     <label>Quality: <span id="image-compress-quality-val">80%</span></label>
                                     <input type="range" id="image-compress-quality-slider" min="1" max="100" value="80" class="glass-range no-drag">
                                 </div>
@@ -996,6 +1084,11 @@
                                     </div>
                                     <input id="image-compress-strip" type="checkbox" checked>
                                 </label>
+                                <div class="form-group estimator-box" style="margin-top: 15px; padding: 12px; background: rgba(255,255,255,0.02); border: 1px dashed var(--panel-border); border-radius: 8px;">
+                                    <label style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">Size Reduction Estimate</label>
+                                    <div style="font-size: 18px; font-weight: 700; color: var(--accent-image); margin-top: 5px;" id="image-compress-estimate">N/A</div>
+                                    <p style="font-size: 10px; color: var(--text-muted); margin-top: 4px;" id="image-compress-details">Select an image to see estimate</p>
+                                </div>
                             </div>
                             <div class="settings-footer-bar">
                                 <button id="image-process-compress-btn" class="primary-btn glow-btn no-drag" disabled>
@@ -1011,8 +1104,70 @@
                             </div>
                             <div class="settings-form-scroll">
                                 <div class="form-group">
-                                    <label>Watermark Text</label>
-                                    <input type="text" id="image-watermark-text" class="glass-input no-drag" placeholder="© ConvertHub">
+                                    <label>Watermark Type</label>
+                                    <select id="image-watermark-type" class="glass-input no-drag">
+                                        <option value="text" selected>Text Overlay</option>
+                                        <option value="image">Image Logo Overlay</option>
+                                    </select>
+                                </div>
+                                
+                                <!-- Text Group -->
+                                <div id="image-watermark-text-group">
+                                    <div class="form-group">
+                                        <label>Watermark Text</label>
+                                        <input type="text" id="image-watermark-text" class="glass-input no-drag" placeholder="© ConvertHub">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Font Family</label>
+                                        <select id="image-watermark-font" class="glass-input no-drag">
+                                            <option value="sans-serif" selected>Sans-Serif (Arial)</option>
+                                            <option value="serif">Serif (Times New Roman)</option>
+                                            <option value="monospace">Monospace (Courier)</option>
+                                            <option value="cursive">Cursive (Brush Script)</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Text Color</label>
+                                        <div class="color-picker-wrapper" style="display: flex; gap: 10px;">
+                                            <input type="color" id="image-watermark-color" value="#ffffff" style="width: 40px; height: 35px; border-radius: 6px; border: 1px solid var(--panel-border); background: transparent;">
+                                            <input type="text" id="image-watermark-color-hex" value="#ffffff" class="glass-input no-drag" placeholder="#ffffff" style="flex: 1; font-size: 13px;">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Text Scale: <span id="image-watermark-scale-val">5%</span></label>
+                                        <input type="range" id="image-watermark-scale-slider" min="1" max="25" value="5" class="glass-range no-drag">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Rotation: <span id="image-watermark-rotation-val">0°</span></label>
+                                        <input type="range" id="image-watermark-rotation-slider" min="0" max="360" value="0" class="glass-range no-drag">
+                                    </div>
+                                </div>
+
+                                <!-- Image Group -->
+                                <div id="image-watermark-image-group" class="hidden">
+                                    <div class="form-group">
+                                        <label>Logo Image Path</label>
+                                        <div class="folder-input-wrapper">
+                                            <input type="text" id="image-watermark-logo-path" readonly class="glass-input" placeholder="Select logo PNG/JPG...">
+                                            <button class="icon-btn-small no-drag" type="button" id="image-watermark-logo-browse-btn" title="Browse image logo"><i class="fa-regular fa-image"></i></button>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Logo Scale: <span id="image-watermark-logo-scale-val">20%</span></label>
+                                        <input type="range" id="image-watermark-logo-scale-slider" min="5" max="100" value="20" class="glass-range no-drag">
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Watermark Placement</label>
+                                    <select id="image-watermark-placement" class="glass-input no-drag">
+                                        <option value="CENTER" selected>Center</option>
+                                        <option value="TOP_LEFT">Top Left</option>
+                                        <option value="TOP_RIGHT">Top Right</option>
+                                        <option value="BOTTOM_LEFT">Bottom Left</option>
+                                        <option value="BOTTOM_RIGHT">Bottom Right</option>
+                                        <option value="TILED">Tiled pattern (Repeating)</option>
+                                    </select>
                                 </div>
                                 <div class="form-group">
                                     <label>Opacity: <span id="image-watermark-opacity-val">50%</span></label>
@@ -1192,7 +1347,7 @@
                                 <p class="settings-eyebrow">About</p>
                                 <h4>About ConvertHub</h4>
                             </div>
-                            <div class="about-version-pill">v2.1</div>
+                            <div class="about-version-pill">v2.2</div>
                         </div>
 
                         <p class="about-copy">
@@ -1201,6 +1356,10 @@
 
                         <p class="about-copy" style="margin-top:8px;">
                             The integrated Smart PDF Toolkit enables compiling images into PDFs, merging multiple PDF files, extracting high-resolution page assets, enforcing optional password encryption, and customizing layout orientation, margins, and paper sizes.
+                        </p>
+
+                        <p class="about-copy" style="margin-top:8px;">
+                            The brand-new Smart Image Toolkit features dynamic, canvas-driven pipelines for resizing, cropping, flipping, and rotating, alongside custom-tuned compression and multi-placement text or logo watermarks with real-time feedback.
                         </p>
 
                         <div class="about-grid">
@@ -1238,6 +1397,10 @@
                             <div class="about-highlight">
                                 <i class="fa-solid fa-layer-group"></i>
                                 <span>High-performance batch queue management with real-time conversion progress</span>
+                            </div>
+                            <div class="about-highlight">
+                                <i class="fa-solid fa-crop-simple"></i>
+                                <span>Advanced Image & PDF Toolkits with real-time canvas preview rendering</span>
                             </div>
                             <div class="about-highlight">
                                 <i class="fa-solid fa-sliders"></i>

@@ -153,7 +153,11 @@ app.whenReady().then(() => {
     ipcMain.handle('window:close', (e) => getTargetWindow(e.sender)?.close());
     ipcMain.handle('window:isMaximized', (e) => !!getTargetWindow(e.sender)?.isMaximized());
     ipcMain.handle('set-titlebar-theme', (e, theme) => {
-        getTargetWindow(e.sender)?.setTitleBarOverlay?.(getTitleBarOverlayOptions(theme));
+        try {
+            getTargetWindow(e.sender)?.setTitleBarOverlay?.(getTitleBarOverlayOptions(theme));
+        } catch (err) {
+            // Titlebar overlay not enabled/supported in current window setup
+        }
     });
 
     // File Conversion

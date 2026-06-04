@@ -1708,7 +1708,6 @@ select.glass-input {
    ========================================== */
 #launchpad-workspace {
     align-items: center;
-    justify-content: center;
     padding: 40px;
     overflow-y: auto;
 }
@@ -2103,207 +2102,10 @@ select.glass-input {
     transform: scale(1.1);
     color: var(--accent-audio) !important;
 }
-.launchpad-footer {
-    display: flex;
-    justify-content: center;
-    margin-top: 10px;
-}
-
-/* Bypass Checkbox custom styling */
-.launchpad-footer .toggle-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    cursor: pointer;
-    padding: 10px 20px;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    transition: all 0.2s ease;
-}
-
-[data-theme="light"] .launchpad-footer .toggle-row {
-    background: rgba(255, 255, 255, 0.35);
-    border-color: rgba(0, 0, 0, 0.05);
-}
-
-.launchpad-footer .toggle-row:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.1);
-}
-
-[data-theme="light"] .launchpad-footer .toggle-row:hover {
-    background: rgba(255, 255, 255, 0.55);
-}
-
-.checkbox-container {
-    position: relative;
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.checkbox-container input {
-    position: absolute;
-    opacity: 0;
-    cursor: pointer;
-    height: 0; width: 0;
-}
-
-.checkbox-custom {
-    position: absolute;
-    top: 0; left: 0;
-    height: 20px; width: 20px;
-    background-color: rgba(255, 255, 255, 0.05);
-    border: 1.5px solid rgba(255, 255, 255, 0.2);
-    border-radius: 6px;
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-[data-theme="light"] .checkbox-custom {
-    background-color: rgba(0, 0, 0, 0.04);
-    border-color: rgba(0, 0, 0, 0.15);
-}
-
-.checkbox-container input:checked ~ .checkbox-custom {
-    background: var(--primary-btn);
-    border-color: transparent;
-    box-shadow: 0 0 10px rgba(139, 92, 246, 0.35);
-}
-
-.checkbox-custom:after {
-    content: "";
-    position: absolute;
-    display: none;
-    left: 6px; top: 2px;
-    width: 5px; height: 10px;
-    border: solid white;
-    border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
-}
-
-.checkbox-container input:checked ~ .checkbox-custom:after {
-    display: block;
-}
-
-.toggle-label {
-    font-size: 13px;
-    color: var(--text-muted);
-    font-weight: 500;
-    user-select: none;
-}
-
-/* ==========================================
-   PDF Workspace & Placeholders
-   ========================================== */
-.pdf-workspace-container {
-    padding: 30px;
-    display: flex;
-    flex-direction: column;
-    gap: 30px;
-    height: 100%;
-}
-
-.pdf-workspace-header h2 {
-    font-size: 24px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 6px;
-}
-
-.text-gradient-pdf {
-    background: linear-gradient(135deg, #f43f5e 0%, #ec4899 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    color: transparent;
-}
-
-.pdf-workspace-header p {
-    color: var(--text-muted);
-    font-size: 14px;
-}
-
-.pdf-workspace-placeholder {
-    flex: 1;
-    background: rgba(255, 255, 255, 0.02);
-    border: 2px dashed rgba(255, 255, 255, 0.08);
-    border-radius: 24px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    padding: 40px;
-    gap: 15px;
-}
-
-[data-theme="light"] .pdf-workspace-placeholder {
-    background: rgba(255, 255, 255, 0.3);
-    border-color: rgba(0, 0, 0, 0.08);
-}
-
-.placeholder-icon-wrap {
-    width: 80px; height: 80px;
-    border-radius: 50%;
-    background: rgba(244, 63, 94, 0.08);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 10px;
-}
-
-.placeholder-sparkle {
-    font-size: 36px;
-    color: #f43f5e;
-    animation: sparkle-glow 3s infinite alternate;
-}
-
-@keyframes sparkle-glow {
-    0% { transform: scale(1); filter: drop-shadow(0 0 5px rgba(244, 63, 94, 0.2)); }
-    100% { transform: scale(1.1) rotate(5deg); filter: drop-shadow(0 0 15px rgba(244, 63, 94, 0.6)); }
-}
-
-.pdf-workspace-placeholder h3 {
-    font-size: 20px;
-    font-weight: 500;
-}
-
-.pdf-workspace-placeholder p {
-    font-size: 14px;
-    color: var(--text-muted);
-    max-width: 420px;
-    line-height: 1.5;
-}
-
-.pdf-workspace-placeholder .placeholder-subtext {
-    font-size: 12px;
-    opacity: 0.7;
-    margin-top: 5px;
-}
-
-/* ==========================================
-   Home Button In Header
-   ========================================== */
-#header-home-btn {
-    opacity: 0.8;
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-#header-home-btn:hover {
-    opacity: 1;
-    transform: scale(1.1);
-    color: var(--accent-audio) !important;
-}
-
 /* ==========================================
    Responsive Design for Launchpad
    ========================================== */
-@media (max-height: 800px) {
+@media (max-height: 900px) {
     :root {
         --launchpad-gap: 24px;
         --launchpad-card-gap: 18px;
@@ -2325,9 +2127,12 @@ select.glass-input {
     .launchpad-header p {
         font-size: 14px;
     }
+    #launchpad-workspace {
+        padding: 24px;
+    }
 }
 
-@media (max-height: 700px) {
+@media (max-height: 760px) {
     :root {
         --launchpad-gap: 16px;
         --launchpad-card-gap: 14px;
@@ -2353,6 +2158,37 @@ select.glass-input {
     .launchpad-footer .toggle-row {
         padding: 6px 14px;
         border-radius: 8px;
+    }
+    #launchpad-workspace {
+        padding: 16px;
+    }
+}
+
+@media (max-height: 660px) {
+    :root {
+        --launchpad-gap: 12px;
+        --launchpad-card-gap: 10px;
+        --launchpad-card-padding-v: 8px;
+        --launchpad-card-padding-h: 8px;
+        --launchpad-icon-size: 32px;
+        --launchpad-icon-margin: 6px;
+        --launchpad-title-size: 14px;
+        --launchpad-title-margin: 2px;
+        --launchpad-desc-size: 11px;
+        --launchpad-desc-margin: 4px;
+        --launchpad-badge-padding-v: 1.5px;
+        --launchpad-badge-padding-h: 4px;
+        --launchpad-badge-font-size: 8.5px;
+    }
+    .launchpad-header h1 {
+        font-size: 18px;
+        margin-bottom: 2px;
+    }
+    .launchpad-header p {
+        font-size: 12px;
+    }
+    #launchpad-workspace {
+        padding: 12px;
     }
 }
 
