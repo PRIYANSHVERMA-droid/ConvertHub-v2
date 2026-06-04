@@ -405,8 +405,12 @@ async function mergePDFs({ pdfPaths, outputFolder, pdfName, pageList }, progress
         // Pre-scan all PDFs to compute total pages to merge and store loaded docs
         const sources = [];
         for (const entry of pdfPaths) {
-        const pdfPath = typeof entry === 'string' ? entry : (entry && entry.path);
-        const rangeStr = typeof entry === 'object' && entry ? (entry.range || '') : '';
+            const pdfPath = (entry && typeof entry === 'object') ? entry.path : String(entry || '');
+            const rangeStr = (entry && typeof entry === 'object') ? (entry.range || '') : '';
+
+            if (!pdfPath) {
+                throw new Error('A PDF entry is missing a file path.');
+            }
 
         if (!pdfPath || !fs.existsSync(pdfPath)) {
             throw new Error(`PDF file does not exist: ${pdfPath || 'Unknown file'}`);

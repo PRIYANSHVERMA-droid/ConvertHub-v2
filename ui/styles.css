@@ -1585,6 +1585,9 @@ select.glass-input {
 .glow-btn:disabled {
     opacity: 0.5;
     pointer-events: none;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
 }
 
 /* ─── Queue Delete Button ────────────────────────────────────── */

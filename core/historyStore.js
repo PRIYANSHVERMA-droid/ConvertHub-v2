@@ -6,23 +6,28 @@ function getHistoryFile() {
     return path.join(app.getPath('userData'), 'history.json');
 }
 
-function getHistory() {
+async function getHistory() {
     try {
-        if (fs.existsSync(getHistoryFile())) {
-            const data = fs.readFileSync(getHistoryFile(), 'utf8');
-            return JSON.parse(data || '[]');
+        const filePath = getHistoryFile();
+        try {
+            await fs.promises.access(filePath, fs.constants.F_OK);
+        } catch {
+            return [];
         }
+        const data = await fs.promises.readFile(filePath, 'utf8');
+        return JSON.parse(data || '[]');
     } catch (error) {
         console.error('[historyStore] Error reading history file:', error);
+        return [];
     }
-    return [];
 }
 
-function saveHistory(history) {
+async function saveHistory(history) {
     try {
-        const tempPath = `${getHistoryFile()}.tmp`;
-        fs.writeFileSync(tempPath, JSON.stringify(history, null, 2), 'utf8');
-        fs.renameSync(tempPath, getHistoryFile());
+        const filePath = getHistoryFile();
+        const tempPath = `${filePath}.tmp`;
+        await fs.promises.writeFile(tempPath, JSON.stringify(history, null, 2), 'utf8');
+        await fs.promises.rename(tempPath, filePath);
         return true;
     } catch (error) {
         console.error('[historyStore] Error writing history file:', error);
@@ -30,16 +35,20 @@ function saveHistory(history) {
     }
 }
 
-function appendJob(record) {
-    const history = getHistory();
+async function appendJob(record) {
+    const history = await getHistory();
     history.unshift(record);
-    saveHistory(history.slice(0, 100));
+    await saveHistory(history.slice(0, 100));
 }
 
-function clearHistory() {
+async function clearHistory() {
     try {
-        if (fs.existsSync(getHistoryFile())) {
-            fs.unlinkSync(getHistoryFile());
+        const filePath = getHistoryFile();
+        try {
+            await fs.promises.access(filePath, fs.constants.F_OK);
+            await fs.promises.unlink(filePath);
+        } catch {
+            // file didn't exist, that's fine
         }
         return true;
     } catch (error) {

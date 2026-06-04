@@ -1225,11 +1225,22 @@ async function convert({ inputPath, outputPath, format, type, quality, preset, i
         switch (engine) {
             case 'ffmpeg':
                 if (resolvedType === 'image' && typeof processImage === 'function') {
+                    const uniqueImageOutput = await createUniqueOutputPath(
+                        path.format({
+                            dir: path.dirname(outputPath),
+                            name: path.parse(outputPath).name,
+                            ext: `.${normalizedFormat}`
+                        })
+                    );
                     result = await processImage({
                         inputPath,
-                        outputFolder: path.dirname(outputPath),
+                        outputFolder: path.dirname(uniqueImageOutput),
+                        outputFilename: path.basename(uniqueImageOutput),
                         options: { format: normalizedFormat, quality }
                     });
+                    if (result && !result.outputPath) {
+                        result.outputPath = uniqueImageOutput;
+                    }
                 } else {
                     result = await convertWithFFmpeg({
                         inputPath,

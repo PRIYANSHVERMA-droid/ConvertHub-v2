@@ -892,7 +892,7 @@
         }
     }
 
-    function addRecentFile() {
+    function refreshRecentFiles() {
         loadRecentFiles();
     }
 
@@ -1617,7 +1617,7 @@
                     item.encoder = result.encoder || null;
 
                     if (!item.recordedInRecent) {
-                        addRecentFile(item.file.name, result.format || resolved.format, result.outputPath);
+                        refreshRecentFiles();
                         item.recordedInRecent = true;
                     }
                     serializeQueue();
@@ -1747,7 +1747,7 @@
                     activeBatch.cancelled = true;
                 }
 
-                results.forEach((entry, index) => {
+                results.forEach((entry, resultIndex) => {
                     const item = getFileById(entry.fileId);
                     if (!item) {
                         return;
@@ -1759,12 +1759,12 @@
                         item.hardwareAccelerated = Boolean(entry.hardwareAccelerated);
                         item.encoder = entry.encoder || null;
                         successCount += 1;
-                        if (entry.outputPath && jobs[index] && entry.outputPath !== jobs[index].outputPath) {
+                        if (entry.outputPath && jobs[resultIndex] && entry.outputPath !== jobs[resultIndex].outputPath) {
                             renamedOutputCount += 1;
                         }
                         markBatchItemComplete(item.id);
                         if (!item.recordedInRecent) {
-                            addRecentFile(item.file.name, entry.format || resolveFileSettings(item).format, entry.outputPath);
+                            refreshRecentFiles();
                             item.recordedInRecent = true;
                         }
                         completedQueueIds.push(item.id);
@@ -1784,9 +1784,9 @@
 
                     const completed = successCount + errorCount;
                     setBatchStatus({
-                        title: isSingleConversion ? 'Processing conversion' : `Processed ${index + 1} of ${results.length}`,
+                        title: isSingleConversion ? 'Processing conversion' : `Processed ${resultIndex + 1} of ${results.length}`,
                         meta: `${completed} completed • ${Math.max(0, readyFiles.length - completed - cancelledCount)} remaining`,
-                        percent: results.length ? Math.round(((index + 1) / results.length) * 100) : 100,
+                        percent: results.length ? Math.round(((resultIndex + 1) / results.length) * 100) : 100,
                         completed,
                         completedIds: activeBatch?.completedIds || new Set()
                     });
@@ -2527,7 +2527,7 @@
 
             if (result?.success) {
                 showToast(`PDF created: ${result.fileName || 'Compiled_Images.pdf'}`, 'success');
-                addRecentFile(result.fileName || 'Compiled_Images.pdf', 'pdf', result.outputPath);
+                refreshRecentFiles();
                 clearPdfImages();
             } else {
                 showToast(result?.error || 'Failed to create PDF.', 'error', 6000);
@@ -2706,23 +2706,29 @@
                 page.cleanup?.();
             }
 
-            document.getElementById('pdf-to-img-select-all')?.addEventListener('click', () => {
-                for (let i = 1; i <= totalPages; i++) selectedPages.add(i);
-                grid.querySelectorAll('.pdf-to-img-card').forEach(c => {
-                    c.classList.add('selected');
-                    c.querySelector('input').checked = true;
-                });
-                updateRangeInputFromGrid();
-            });
+            const selectAllBtn = document.getElementById('pdf-to-img-select-all');
+            if (selectAllBtn) {
+                selectAllBtn.onclick = () => {
+                    for (let i = 1; i <= totalPages; i++) selectedPages.add(i);
+                    grid.querySelectorAll('.pdf-to-img-card').forEach(c => {
+                        c.classList.add('selected');
+                        c.querySelector('input').checked = true;
+                    });
+                    updateRangeInputFromGrid();
+                };
+            }
 
-            document.getElementById('pdf-to-img-deselect-all')?.addEventListener('click', () => {
-                selectedPages.clear();
-                grid.querySelectorAll('.pdf-to-img-card').forEach(c => {
-                    c.classList.remove('selected');
-                    c.querySelector('input').checked = false;
-                });
-                updateRangeInputFromGrid();
-            });
+            const deselectAllBtn = document.getElementById('pdf-to-img-deselect-all');
+            if (deselectAllBtn) {
+                deselectAllBtn.onclick = () => {
+                    selectedPages.clear();
+                    grid.querySelectorAll('.pdf-to-img-card').forEach(c => {
+                        c.classList.remove('selected');
+                        c.querySelector('input').checked = false;
+                    });
+                    updateRangeInputFromGrid();
+                };
+            }
 
             if (pdf.destroy) await pdf.destroy().catch(() => undefined);
             
@@ -2793,6 +2799,7 @@
 
         const prepared = uniqueFiles.map((file) => ({
             id: `pdf-merge-${pdfMergeIdCounter++}`,
+            raw: file.raw,
             name: file.name,
             path: file.path,
             size: file.size
@@ -2837,7 +2844,7 @@
 
             if (result?.success) {
                 showToast(`Merged ${result.pageCount || ''} pages into ${result.fileName || 'Merged_PDF.pdf'}`, 'success');
-                addRecentFile(result.fileName || 'Merged_PDF.pdf', 'pdf', result.outputPath);
+                refreshRecentFiles();
                 if (appSettings.openFolderOnComplete && result.outputPath) {
                     await window.app?.openFolder?.(getFolderFromPath(result.outputPath));
                 }
@@ -2987,7 +2994,7 @@
             }
 
             showToast(`Successfully extracted ${successCount} page${successCount > 1 ? 's' : ''} as ${format.toUpperCase()}`, 'success');
-            addRecentFile(`${pdfStem} (${successCount} images)`, format, outputFolder);
+            refreshRecentFiles();
             if (appSettings.openFolderOnComplete) {
                 await window.app.openFolder(outputFolder);
             }
@@ -3598,6 +3605,9 @@
         }
         saveSettings();
         syncSettingsForm();
+        if (outputFolderInput && !outputFolderInput.value) {
+            outputFolderInput.value = appSettings.defaultOutputFolder || defaultDownloadsPath || '';
+        }
         syncSidebarFromScope();
         renderQueue();
         closeSettings();
@@ -3832,6 +3842,7 @@
         const file = files[0];
         if (file.name.toLowerCase().endsWith('.pdf')) {
             selectedWatermarkFile = {
+                raw: file,
                 name: file.name,
                 path: file.path || (window.app && window.app.getPathForFile ? window.app.getPathForFile(file) : ''),
                 size: file.size || 0
@@ -4056,7 +4067,7 @@
 
             if (result?.success) {
                 showToast(`Watermarked successfully: ${result.fileName}`, 'success');
-                addRecentFile(result.fileName, 'pdf', outputFolder);
+                refreshRecentFiles();
                 if (appSettings.openFolderOnComplete) {
                     await window.app.openFolder(outputFolder);
                 }
@@ -4085,6 +4096,7 @@
                 pdfCompressFiles.push({
                     id,
                     file: {
+                        raw: file,
                         name: file.name,
                         path: file.path || (window.app && window.app.getPathForFile ? window.app.getPathForFile(file) : ''),
                         size: file.size || 0
@@ -4144,7 +4156,10 @@
                 const compMB = (item.compressedSize / (1024 * 1024)).toFixed(2);
                 sizeMeta = `${origMB} MB &bull; Compressed: ${compMB} MB`;
                 statusMarkup = `
-                    <span class="compress-savings-pill"><i class="fa-solid fa-arrow-down"></i> ${item.savings}%</span>
+                    ${item.savings > 0
+                        ? `<span class="compress-savings-pill"><i class="fa-solid fa-arrow-down"></i> ${item.savings}%</span>`
+                        : `<span class="compress-status-text" style="color:var(--text-muted);">No reduction</span>`
+                    }
                     <span class="compress-status-text complete">Done</span>
                 `;
             } else if (item.status === 'failed') {
@@ -4219,7 +4234,7 @@
                             item.compressedSize = result.compressedSize;
                             item.savings = result.savings;
                             successCount++;
-                            addRecentFile(result.fileName, 'pdf', outputFolder);
+                            refreshRecentFiles();
                         } else {
                             item.status = 'failed';
                         }
@@ -4324,21 +4339,15 @@
                                 const finalPathExists = await window.app.pathExists({ path: finalRes.outputPath });
                                 if (finalPathExists) {
                                     // Retrieve actual size of the compressed file from disk
-                                    let compSize = 0;
-                                    if (window.app && window.app.getFileSize) {
-                                        compSize = await window.app.getFileSize(finalRes.outputPath);
-                                    }
-                                    if (!compSize || compSize <= 0) {
-                                        compSize = Math.round(item.originalSize * (quality / 180));
-                                    }
-                                    item.compressedSize = compSize;
-                                    if (item.compressedSize >= item.originalSize) {
-                                        // Fallback compression indicator if size is larger
-                                        item.compressedSize = Math.round(item.originalSize * 0.65);
-                                    }
-                                    item.savings = Math.max(10, Math.round(((item.originalSize - item.compressedSize) / item.originalSize) * 100));
+                                    const compSize = (window.app?.getFileSize)
+                                        ? await window.app.getFileSize(finalRes.outputPath)
+                                        : 0;
+                                    item.compressedSize = compSize || 0;
+                                    item.savings = (compSize > 0 && compSize < item.originalSize)
+                                        ? Math.round(((item.originalSize - compSize) / item.originalSize) * 100)
+                                        : 0;
                                     successCount++;
-                                    addRecentFile(finalRes.fileName, 'pdf', outputFolder);
+                                    refreshRecentFiles();
                                 } else {
                                     item.status = 'failed';
                                 }
@@ -4377,6 +4386,7 @@
         const file = files[0];
         if (file.name.toLowerCase().endsWith('.pdf')) {
             selectedOrganizeFile = {
+                raw: file,
                 name: file.name,
                 path: file.path || (window.app && window.app.getPathForFile ? window.app.getPathForFile(file) : ''),
                 size: file.size || 0
@@ -4652,7 +4662,7 @@
 
             if (result?.success) {
                 showToast(`PDF organized successfully: ${result.fileName}`, 'success');
-                addRecentFile(result.fileName, 'pdf', outputFolder);
+                refreshRecentFiles();
                 if (appSettings.openFolderOnComplete) {
                     await window.app.openFolder(outputFolder);
                 }
@@ -5151,12 +5161,12 @@
                     outputFolder,
                     options: {
                         ...options,
-                        format: fileExt
+                        format: options.format || fileExt
                     }
                 });
                 if (res.success) {
                     successCount++;
-                    addRecentFile(res.fileName, window.app.getFileExtension(res.outputPath), res.outputPath);
+                    refreshRecentFiles();
                 }
             }
             showToast(`Successfully processed ${successCount} image(s).`, 'success');

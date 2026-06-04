@@ -262,7 +262,9 @@ app.whenReady().then(() => {
     // Register global history listener once app is ready
     const manager = getConversionManager();
     manager.conversionEvents.on('job-complete', (record) => {
-        getHistoryStore().appendJob(record);
+        getHistoryStore().appendJob(record).catch(err =>
+            console.error('[main] Failed to append job to history:', err)
+        );
         if (!desktopNotificationsEnabled || !mainWindow || mainWindow.isDestroyed()) return;
         if (mainWindow.isFocused()) {
             mainWindow.webContents.send('conversion-complete-focused', record);
