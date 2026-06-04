@@ -102,11 +102,17 @@ A visual and comprehensive utility workshop to merge, compile, organize, compres
 - ⚡ **Batch Processing:** Parallel queue pipeline manages massive batch actions smoothly.
 - ⚙️ **GPU-Accelerated:** Automatic detection and integration of hardware encoders.
 
+### 📷 Smart Image Toolkit
+- 📐 **Resize & Crop Studio:** Scale proportionally, crop visually, or fit to specific dimensions (`cover`, `contain` with color bounds, `fill`) with interactive preset profiles.
+- 🔄 **Orientation & Transforms:** Flip images horizontally/vertically or rotate in 90° intervals.
+- 📉 **Optimized Compressors:** Re-encode to `JPEG`, `PNG`, `WebP`, or `AVIF` formats while estimating and previewing file size savings.
+- ✍️ **Visual Watermarker:** Draw custom brand logos or styled text (fonts, size, color picker, opacity, rotation, tiling layouts) with a live canvas preview.
+
 ### 📐 Smart PDF Toolkit
 - 🖼 **Image to PDF Compiler:** Compile lists of images into structured PDFs with custom layouts, margins, rotation, backgrounds, titles, and password encryption.
 - 🔗 **Interactive PDF Merger:** Combine multiple PDF documents or select targeted page ranges.
 - ✂️ **Visual Page Organizer:** Drag-and-drop environment to interactively re-order, rotate, delete, or extract pages.
-- 📂 **Page Extraction & ZIP Export:** Extract individual pages or compile documents directly into a high-res image ZIP archive.
+- 📂 **Visual PDF to Images:** Render preview thumbnails of PDF pages, visually select/deselect pages with sync checkboxes, and extract to images or compile to image ZIPs.
 - 📉 **Advanced PDF Compression:** Pure lossless Flate compression or lossy re-encoding for significant size reduction.
 - ✍️ **Custom Watermarker:** Brand documents with adjustable text, font size, placement, color opacity, and rotation.
 
@@ -229,6 +235,7 @@ ConvertHub v2
 - 🐧 **Cross-Platform Support:** Expanding wrapper APIs and binaries to support macOS and Linux environments.
 - 👁 **Local OCR Toolkit:** Integrating the offline Tesseract OCR engine for text recognition on scanned PDFs and images.
 - 🎨 **Custom Preset Designer:** A user-friendly control panel to design, save, and import personalized conversion profile arguments.
+- ⚡ **Batch Image Workflows:** Extending the queue manager to run batch cropping, resizing, and watermarking across multiple folders of images in parallel.
 - ⚡ **Batch PDF Utilities:** Extending the queue manager to run watermarking and compressions on multiple PDFs in parallel.
 
 ---
