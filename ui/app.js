@@ -2148,10 +2148,14 @@
             // Check if it's a directory by running the directory scanner helper
             let isDir = false;
             if (window.app?.readFolderImages) {
-                const scanRes = await window.app.readFolderImages(filePath);
-                if (scanRes && scanRes.success && scanRes.files && scanRes.files.length > 0) {
-                    filesToAdd = filesToAdd.concat(scanRes.files);
-                    isDir = true;
+                try {
+                    const scanRes = await window.app.readFolderImages(filePath);
+                    if (scanRes && scanRes.success && scanRes.files && scanRes.files.length > 0) {
+                        filesToAdd = filesToAdd.concat(scanRes.files);
+                        isDir = true;
+                    }
+                } catch (err) {
+                    console.error('[renderer] Folder scanning failed:', err);
                 }
             }
             

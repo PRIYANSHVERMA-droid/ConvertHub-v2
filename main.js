@@ -227,17 +227,27 @@ app.whenReady().then(() => {
     ipcMain.handle('pdf:compress-lossless', (_e, data) => getPDFProcessor().compressPDFLossless(data));
     ipcMain.handle('pdf:organize', (_e, data) => getPDFProcessor().organizePDF(data));
     ipcMain.handle('pdf:read-folder-images', async (_e, { folderPath }) => {
-        const results = [];
-        const scan = async (dir) => {
-            for (const entry of await fs.promises.readdir(dir, { withFileTypes: true })) {
-                const full = path.join(dir, entry.name);
-                if (entry.isDirectory()) await scan(full);
-                else if (entry.isFile() && ['.png', '.jpg', '.jpeg', '.webp'].includes(path.extname(entry.name).toLowerCase())) {
-                    results.push({ name: entry.name, path: full, size: (await fs.promises.stat(full)).size });
-                }
+        try {
+            const stat = await fs.promises.stat(folderPath);
+            if (!stat.isDirectory()) {
+                return { success: false, error: 'Not a directory' };
             }
-        };
-        await scan(folderPath); return { success: true, files: results };
+            const results = [];
+            const scan = async (dir) => {
+                for (const entry of await fs.promises.readdir(dir, { withFileTypes: true })) {
+                    const full = path.join(dir, entry.name);
+                    if (entry.isDirectory()) await scan(full);
+                    else if (entry.isFile() && ['.png', '.jpg', '.jpeg', '.webp'].includes(path.extname(entry.name).toLowerCase())) {
+                        results.push({ name: entry.name, path: full, size: (await fs.promises.stat(full)).size });
+                    }
+                }
+            };
+            await scan(folderPath);
+            return { success: true, files: results };
+        } catch (err) {
+            console.error('[main] Failed to read folder images:', err);
+            return { success: false, error: err.message };
+        }
     });
 
     ipcMain.on('show-notification', (_e, { title, body, folderToOpen }) => {
