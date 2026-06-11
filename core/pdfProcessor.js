@@ -379,7 +379,8 @@ async function mergePDFs({ pdfPaths, outputFolder, pdfName, pageList }, progress
                 try {
                     sourcePdf = await PDFDocument.load(bytes, { ignoreEncryption: false });
                 } catch (err) {
-                    if (String(err?.message || '').toLowerCase().includes('encrypted')) {
+                    const msg = String(err?.message || '').toLowerCase();
+                    if (msg.includes('encrypted') || msg.includes('password') || msg.includes('decrypt')) {
                         throw new Error(`${path.basename(pdfPath)} is encrypted or password-protected and cannot be merged automatically.`);
                     }
                     throw new Error(`${path.basename(pdfPath)} could not be opened as a PDF.`);
@@ -421,7 +422,8 @@ async function mergePDFs({ pdfPaths, outputFolder, pdfName, pageList }, progress
         try {
             sourcePdf = await PDFDocument.load(bytes, { ignoreEncryption: false });
         } catch (error) {
-            if (String(error?.message || '').toLowerCase().includes('encrypted')) {
+            const msg = String(error?.message || '').toLowerCase();
+            if (msg.includes('encrypted') || msg.includes('password') || msg.includes('decrypt')) {
                 throw new Error(`${path.basename(pdfPath)} is encrypted or password-protected and cannot be merged automatically.`);
             }
             throw new Error(`${path.basename(pdfPath)} could not be opened as a PDF.`);
@@ -510,7 +512,7 @@ async function createImagesZip({ filePaths, outputFolder, zipName }) {
         await fs.promises.writeFile(listPath, safeFiles.join(os.EOL), 'utf8');
 
         await new Promise((resolve, reject) => {
-            const args = ['a', '-tzip', finalPath, `@${listPath}`, '-y'];
+            const args = ['a', '-tzip', finalPath, `@${listPath}`, '-scsUTF-8', '-y'];
             const proc = spawn(sevenZipPath, args, { cwd: sourceDir, windowsHide: true });
             let stderr = '';
             let stdout = '';
@@ -562,7 +564,16 @@ async function watermarkPDF({ pdfPath, outputFolder, pdfName, watermarkType, tex
     await fs.promises.mkdir(outputFolder, { recursive: true });
 
     const pdfBytes = await fs.promises.readFile(pdfPath);
-    const pdfDoc = await PDFDocument.load(pdfBytes);
+    let pdfDoc;
+    try {
+        pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: false });
+    } catch (err) {
+        const msg = String(err?.message || '').toLowerCase();
+        if (msg.includes('encrypted') || msg.includes('password') || msg.includes('decrypt')) {
+            throw new Error('This PDF is encrypted or password-protected and cannot be watermarked.');
+        }
+        throw new Error('Could not open the file as a PDF.');
+    }
     const totalPages = pdfDoc.getPageCount();
 
     // Resolve target page indices (0-based)
@@ -748,7 +759,16 @@ async function compressPDFLossless({ pdfPath, outputFolder, pdfName }) {
     await fs.promises.mkdir(outputFolder, { recursive: true });
 
     const bytes = await fs.promises.readFile(pdfPath);
-    const pdfDoc = await PDFDocument.load(bytes);
+    let pdfDoc;
+    try {
+        pdfDoc = await PDFDocument.load(bytes, { ignoreEncryption: false });
+    } catch (err) {
+        const msg = String(err?.message || '').toLowerCase();
+        if (msg.includes('encrypted') || msg.includes('password') || msg.includes('decrypt')) {
+            throw new Error('This PDF is encrypted or password-protected and cannot be compressed.');
+        }
+        throw new Error('Could not open the file as a PDF.');
+    }
     const compressedBytes = await pdfDoc.save({
         useObjectStreams: true,
         useCompression: true
@@ -784,7 +804,16 @@ async function organizePDF({ pdfPath, outputFolder, pdfName, pageOperations }) {
     await fs.promises.mkdir(outputFolder, { recursive: true });
 
     const bytes = await fs.promises.readFile(pdfPath);
-    const pdfDoc = await PDFDocument.load(bytes);
+    let pdfDoc;
+    try {
+        pdfDoc = await PDFDocument.load(bytes, { ignoreEncryption: false });
+    } catch (err) {
+        const msg = String(err?.message || '').toLowerCase();
+        if (msg.includes('encrypted') || msg.includes('password') || msg.includes('decrypt')) {
+            throw new Error('This PDF is encrypted or password-protected and cannot be organized.');
+        }
+        throw new Error('Could not open the file as a PDF.');
+    }
 
     const outputPdf = await PDFDocument.create();
     const indicesToCopy = pageOperations.map(op => op.sourcePageIndex);

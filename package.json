@@ -1,6 +1,6 @@
 {
   "name": "converthub-v2",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "ConvertHub v2 - Universal File Converter",
   "main": "main.js",
   "author": "Priyansh Verma",
@@ -34,7 +34,8 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "assets/app-icon.ico"
+      "icon": "assets/app-icon.ico",
+      "artifactName": "ConvertHub-v2-Setup-${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,

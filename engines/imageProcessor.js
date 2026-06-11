@@ -206,7 +206,7 @@ async function processImage({ inputPath, outputFolder, options }) {
                     w = Math.round(metadata.width * (h / metadata.height));
                 }
 
-                watermarkImg = watermarkImg.resize(w, h).ensureAlpha();
+                watermarkImg = watermarkImg.resize(w, h).toColourSpace('srgb').ensureAlpha();
                 // Apply opacity transparency
                 watermarkImg = watermarkImg.linear([1, 1, 1, opacity], [0, 0, 0, 0]);
                 const watermarkBuffer = await watermarkImg.toBuffer();

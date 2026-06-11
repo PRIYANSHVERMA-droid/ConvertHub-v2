@@ -11,7 +11,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="MIT License">
   <img src="https://img.shields.io/badge/Platform-Windows-0078d7?style=flat-square&logo=windows" alt="Windows Platform">
-  <img src="https://img.shields.io/badge/Version-2.2-emerald?style=flat-square" alt="Version 2.2">
+  <img src="https://img.shields.io/badge/Version-2.2.1-emerald?style=flat-square" alt="Version 2.2.1">
   <img src="https://img.shields.io/badge/Built%20With-Electron-478a9c?style=flat-square&logo=electron" alt="Electron">
   <img src="https://img.shields.io/badge/Privacy-100%25%20Offline-success?style=flat-square" alt="100% Offline">
 </p>

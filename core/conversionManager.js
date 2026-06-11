@@ -781,12 +781,14 @@ function createProgressReporter(onProgress, minIntervalMs = 120) {
     };
 }
 
-function runFFmpegConversionAttempt({ ffmpegPath, inputPath, outputPath, codecArgs, qualityArgs, imageFrameArgs, onProgress, controller }) {
+function runFFmpegConversionAttempt({ ffmpegPath, inputPath, outputPath, codecArgs, qualityArgs, imageFrameArgs, decoderArgs = [], onProgress, controller }) {
     return new Promise((resolve, reject) => {
         throwIfCancelled(controller);
 
         const args = [
             '-y',
+            '-hwaccel', 'auto',
+            ...decoderArgs,
             '-i',
             inputPath,
             ...codecArgs,
@@ -908,6 +910,21 @@ function convertWithFFmpeg({ inputPath, outputPath, format, type, quality, onPro
             throwIfCancelled(controller);
 
             const imageFrameArgs = type === 'image' && normalizedFormat !== 'gif' ? ['-frames:v', '1'] : [];
+
+            // Probe input codecs to handle formats like AV1
+            let decoderArgs = [];
+            if (type === 'video') {
+                try {
+                    const probe = await runProcess(ffmpegPath, ['-hide_banner', '-i', inputPath], { controller });
+                    const info = (probe.stderr || '') + (probe.stdout || '');
+                    if (/video:\s*av1/i.test(info)) {
+                        decoderArgs = ['-c:v', 'av1'];
+                    }
+                } catch (e) {
+                    console.warn('[conversionManager] Probe failed:', e.message);
+                }
+            }
+
             const plans = await getFFmpegPlans(type, normalizedFormat, quality);
             const reportProgress = createProgressReporter(onProgress);
             let lastError = null;
@@ -924,6 +941,7 @@ function convertWithFFmpeg({ inputPath, outputPath, format, type, quality, onPro
                         codecArgs: plan.codecArgs,
                         qualityArgs: plan.qualityArgs,
                         imageFrameArgs,
+                        decoderArgs,
                         onProgress: reportProgress,
                         controller
                     });
