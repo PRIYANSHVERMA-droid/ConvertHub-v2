@@ -123,7 +123,7 @@ function compressImage(ffmpegPath, inputPath, outputPath, quality) {
 /**
  * Compiles a list of image paths into a single PDF.
  */
-async function compileImagesToPDF({ imagePaths, outputFolder, pdfName, pageSize = 'A4', orientation = 'PORTRAIT', marginType = 'NONE', quality = 100, layout = 'CENTER', pageNumbers = false, backgroundColor = '#ffffff', title = '', author = '', password = '' }) {
+async function compileImagesToPDF({ imagePaths, outputFolder, pdfName, pageSize = 'A4', orientation = 'PORTRAIT', marginType = 'NONE', quality = 100, layout = 'CENTER', pageNumbers = false, backgroundColor = '#ffffff', title = '', author = '', password = '' }, progressCb) {
     if (!imagePaths || !Array.isArray(imagePaths) || imagePaths.length === 0) {
         throw new Error('No images selected for PDF creation.');
     }
@@ -266,6 +266,15 @@ async function compileImagesToPDF({ imagePaths, outputFolder, pdfName, pageSize 
                     color: rgb(0, 0, 0),
                 });
             }
+
+            if (typeof progressCb === 'function') {
+                const percent = Math.min(100, Math.round((pageIdx / imagePaths.length) * 100));
+                try {
+                    progressCb({ percent, message: `Processing image ${pageIdx}/${imagePaths.length}` });
+                } catch (err) {
+                }
+            }
+
             pageIdx++;
         }
 

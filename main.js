@@ -216,8 +216,12 @@ app.whenReady().then(() => {
     ipcMain.handle('set-notifications-enabled', (_e, enabled) => { desktopNotificationsEnabled = !!enabled; return true; });
 
     // Processors
-    ipcMain.handle('process-image', (_e, payload) => getImageProcessor().processImage(payload));
-    ipcMain.handle('pdf:create', (_e, data) => getPDFProcessor().compileImagesToPDF(data));
+    ipcMain.handle('process-image', (_e, payload) => getImageProcessor().processImage(payload, (p) => {
+        relayConversionProgress({ fileId: payload?.inputPath || 'image-process', percent: p.percent || 0 });
+    }));
+    ipcMain.handle('pdf:create', (_e, data) => getPDFProcessor().compileImagesToPDF(data, (p) => {
+        relayConversionProgress({ fileId: data?.pdfName || 'pdf-create', percent: p.percent || 0 });
+    }));
     ipcMain.handle('pdf:merge', (_e, data) => getPDFProcessor().mergePDFs(data, (p) => {
         relayConversionProgress({ fileId: data?.pdfName || 'merge', percent: p.percent || 0 });
     }));

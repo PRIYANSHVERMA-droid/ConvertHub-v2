@@ -2512,7 +2512,25 @@
         const originalLabel = pdfCompileBtn.innerHTML;
         pdfCompileBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Compiling PDF';
 
+        setBatchStatus({ title: 'Compiling PDF', meta: `0/${selectedPaths.length} images`, percent: 0 });
+
+        let progressHandler = null;
+        let progressCleanup = null;
+
         try {
+            if (window.app?.onProgress) {
+                progressHandler = (data) => {
+                    if (data && typeof data.percent === 'number') {
+                        setBatchStatus({
+                            title: 'Compiling PDF',
+                            meta: data.message || `${Math.round(data.percent)}% complete`,
+                            percent: data.percent
+                        });
+                    }
+                };
+                progressCleanup = window.app.onProgress(progressHandler);
+            }
+
             const result = await window.app?.createPDF?.({
                 imagePaths: selectedPaths,
                 outputFolder,
@@ -2533,14 +2551,18 @@
                 showToast(`PDF created: ${result.fileName || 'Compiled_Images.pdf'}`, 'success');
                 refreshRecentFiles();
                 clearPdfImages();
+                setBatchStatus({ title: 'Compiling PDF', meta: `Complete`, percent: 100 });
             } else {
                 showToast(result?.error || 'Failed to create PDF.', 'error', 6000);
             }
         } catch (error) {
             showToast(error?.message || 'Failed to create PDF.', 'error', 6000);
         } finally {
+            if (progressCleanup) progressCleanup();
+            else if (window.app?.removeProgressListeners) window.app.removeProgressListeners();
             pdfCompileBtn.innerHTML = originalLabel;
             updatePdfButtons();
+            setTimeout(() => setBatchStatus(null), 1500);
         }
     }
 
@@ -5156,8 +5178,31 @@
         btn.disabled = true;
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
 
+        const totalFiles = imageToolkitFiles.length;
         let successCount = 0;
+        let processedFiles = 0;
+
+        setBatchStatus({ title: 'Processing Images', meta: `0/${totalFiles} files`, percent: 0 });
+
+        let progressHandler = null;
+        let progressCleanup = null;
+
         try {
+            if (window.app?.onProgress) {
+                progressHandler = (data) => {
+                    if (data && typeof data.percent === 'number') {
+                        const filePercent = data.percent;
+                        const overallPercent = Math.min(100, Math.round(((processedFiles + filePercent / 100) / totalFiles) * 100));
+                        setBatchStatus({
+                            title: 'Processing Images',
+                            meta: data.message || `${processedFiles}/${totalFiles} files (${filePercent}%)`,
+                            percent: overallPercent
+                        });
+                    }
+                };
+                progressCleanup = window.app.onProgress(progressHandler);
+            }
+
             for (const file of imageToolkitFiles) {
                 const fileExt = window.app.getFileExtension(file.path) || 'png';
                 const res = await window.app.processImage({
@@ -5172,18 +5217,23 @@
                     successCount++;
                     refreshRecentFiles();
                 }
+                processedFiles++;
             }
             showToast(`Successfully processed ${successCount} image(s).`, 'success');
             if (appSettings.openFolderOnComplete) {
                 await window.app.openFolder(outputFolder);
             }
             clearImageToolkitFiles();
+            setBatchStatus({ title: 'Processing Images', meta: `Complete`, percent: 100 });
         } catch (err) {
             console.error('Image processing failed:', err);
             showToast(`Processing failed: ${err.message}`, 'error');
         } finally {
+            if (progressCleanup) progressCleanup();
+            else if (window.app?.removeProgressListeners) window.app.removeProgressListeners();
             btn.innerHTML = originalLabel;
             btn.disabled = false;
+            setTimeout(() => setBatchStatus(null), 1500);
         }
     }
 

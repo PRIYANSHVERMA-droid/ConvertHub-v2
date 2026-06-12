@@ -21,7 +21,7 @@ function createUniquePath(targetDir, desiredName, extension) {
 /**
  * Process an image: resize, crop, compress, watermark, convert.
  */
-async function processImage({ inputPath, outputFolder, options }) {
+async function processImage({ inputPath, outputFolder, options }, progressCb) {
     if (!inputPath || !fs.existsSync(inputPath)) {
         throw new Error('Input image does not exist.');
     }
@@ -31,8 +31,16 @@ async function processImage({ inputPath, outputFolder, options }) {
 
     await fs.promises.mkdir(outputFolder, { recursive: true });
 
+    if (typeof progressCb === 'function') {
+        try { progressCb({ percent: 10, message: 'Loading image...' }); } catch (e) {}
+    }
+
     let pipeline = sharp(inputPath);
     const baseMetadata = await pipeline.metadata();
+
+    if (typeof progressCb === 'function') {
+        try { progressCb({ percent: 30, message: 'Processing...' }); } catch (e) {}
+    }
 
     // 0. Rotate & Flip (Transformations)
     let rotateAngle = Number(options.rotate) || 0;
@@ -271,7 +279,15 @@ async function processImage({ inputPath, outputFolder, options }) {
     const stem = path.basename(inputPath, path.extname(inputPath));
     const finalPath = createUniquePath(outputFolder, stem, format);
 
+    if (typeof progressCb === 'function') {
+        try { progressCb({ percent: 80, message: 'Saving...' }); } catch (e) {}
+    }
+
     await pipeline.toFile(finalPath);
+
+    if (typeof progressCb === 'function') {
+        try { progressCb({ percent: 100, message: 'Complete' }); } catch (e) {}
+    }
 
     return {
         success: true,
