@@ -59,7 +59,7 @@ function detectPlatform() {
     return 'unknown';
 }
 
-contextBridge.exposeInMainWorld('app', {
+const appBridge = {
     // Conversion
     convertFile: (data) => ipcRenderer.invoke('convert-file', data),
     convertBatch: (data) => ipcRenderer.invoke('convert-batch', data),
@@ -163,8 +163,9 @@ contextBridge.exposeInMainWorld('app', {
         ipcRenderer.on('window-state-changed', (_event, data) => callback(data));
     },
 
-    // Updater
+    // Updater & External Links
     getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+    openExternal: (url) => ipcRenderer.invoke('open-external', url),
     checkForUpdates: () => ipcRenderer.invoke('updater:check'),
     downloadUpdate: () => ipcRenderer.invoke('updater:download'),
     restartAndInstallUpdate: () => ipcRenderer.invoke('updater:restart-install'),
@@ -175,6 +176,10 @@ contextBridge.exposeInMainWorld('app', {
     removeUpdateStatusListeners: () => {
         ipcRenderer.removeAllListeners('updater:status');
     }
-});
+};
 
-console.log('[preload] window.app exposed');
+contextBridge.exposeInMainWorld('app', appBridge);
+contextBridge.exposeInMainWorld('electronAPI', appBridge);
+
+console.log('[preload] window.app and window.electronAPI exposed');
+

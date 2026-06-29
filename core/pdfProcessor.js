@@ -79,9 +79,14 @@ async function getFfmpegPath() {
 }
 
 async function getSevenZipPath() {
-    const localPath = process.platform === 'win32'
-        ? path.resolve(__dirname, '..', 'engines', '7zip', '7za.exe')
-        : null;
+    const isPackaged = process.env.NODE_ENV === 'production' || process.defaultApp === false;
+    let localPath = null;
+    if (process.platform === 'win32') {
+        const enginesDir = isPackaged && process.resourcesPath
+            ? path.join(process.resourcesPath, 'engines')
+            : path.resolve(__dirname, '..', 'engines');
+        localPath = path.join(enginesDir, '7zip', '7za.exe');
+    }
 
     if (localPath && fs.existsSync(localPath)) {
         return localPath;
@@ -126,6 +131,9 @@ function compressImage(ffmpegPath, inputPath, outputPath, quality) {
 async function compileImagesToPDF({ imagePaths, outputFolder, pdfName, pageSize = 'A4', orientation = 'PORTRAIT', marginType = 'NONE', quality = 100, layout = 'CENTER', pageNumbers = false, backgroundColor = '#ffffff', title = '', author = '', password = '' }, progressCb) {
     if (!imagePaths || !Array.isArray(imagePaths) || imagePaths.length === 0) {
         throw new Error('No images selected for PDF creation.');
+    }
+    if (imagePaths.length > 150) {
+        throw new Error('Too many images selected. Maximum limit is 150 images per PDF to prevent out-of-memory errors.');
     }
     if (!outputFolder) {
         throw new Error('Output folder is not defined.');
@@ -369,6 +377,9 @@ async function mergePDFs({ pdfPaths, outputFolder, pdfName, pageList }, progress
     if (hasPageList) {
         let pagesMergedSoFar = 0;
         const totalPagesToMerge = pageList.length;
+        if (totalPagesToMerge > 300) {
+            throw new Error('Total pages to merge exceeds 300 to prevent out-of-memory errors.');
+        }
         const cache = new Map();
 
         for (const item of pageList) {
@@ -442,6 +453,10 @@ async function mergePDFs({ pdfPaths, outputFolder, pdfName, pageList }, progress
         const pageIndices = parsePageRangeString(rangeStr, total) || sourcePdf.getPageIndices();
             sources.push({ pdfPath, fileName: path.basename(pdfPath), sourcePdf, pageIndices });
             mergedPageCount += pageIndices.length;
+        }
+
+        if (mergedPageCount > 300) {
+            throw new Error('Total pages to merge exceeds 300 to prevent out-of-memory errors.');
         }
 
         const totalPagesToMerge = mergedPageCount;
@@ -647,11 +662,14 @@ async function watermarkPDF({ pdfPath, outputFolder, pdfName, watermarkType, tex
         const { width, height } = page.getSize();
 
         if (watermarkType === 'text') {
-            const text = textOptions?.text || 'CONFIDENTIAL';
-            const fontSize = Number(textOptions?.fontSize) || 48;
+            const text = textOptions?.text !== undefined && textOptions?.text !== '' ? textOptions.text : 'CONFIDENTIAL';
+            const rawFontSize = textOptions?.fontSize;
+            const fontSize = (rawFontSize !== undefined && rawFontSize !== '' && !isNaN(Number(rawFontSize))) ? Number(rawFontSize) : 48;
             const hex = textOptions?.color || '#ff0000';
-            const opacity = Number(textOptions?.opacity) || 0.3;
-            const rotation = Number(textOptions?.rotation) || -45;
+            const rawOpacity = textOptions?.opacity;
+            const opacity = (rawOpacity !== undefined && rawOpacity !== '' && !isNaN(Number(rawOpacity))) ? Number(rawOpacity) : 0.3;
+            const rawRotation = textOptions?.rotation;
+            const rotation = (rawRotation !== undefined && rawRotation !== '' && !isNaN(Number(rawRotation))) ? Number(rawRotation) : -45;
             const placement = textOptions?.placement || 'CENTER';
             const colorRgb = hexToRgb(hex);
 
@@ -699,8 +717,10 @@ async function watermarkPDF({ pdfPath, outputFolder, pdfName, watermarkType, tex
                 });
             }
         } else if (watermarkType === 'image' && logoImage) {
-            const scale = Number(imageOptions?.scale) || 0.3;
-            const opacity = Number(imageOptions?.opacity) || 0.3;
+            const rawScale = imageOptions?.scale;
+            const scale = (rawScale !== undefined && rawScale !== '' && !isNaN(Number(rawScale))) ? Number(rawScale) : 0.3;
+            const rawOpacity = imageOptions?.opacity;
+            const opacity = (rawOpacity !== undefined && rawOpacity !== '' && !isNaN(Number(rawOpacity))) ? Number(rawOpacity) : 0.3;
             const placement = imageOptions?.placement || 'CENTER';
 
             const w = logoWidth * scale;

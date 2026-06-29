@@ -1,8 +1,44 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, protocol, net, nativeTheme, Notification } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, protocol, net, nativeTheme, Notification, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const { pathToFileURL } = require('url');
 const { initUpdater } = require('./core/updater');
+
+// IPC sender origin validation
+function verifySender(event) {
+    if (!event || !event.senderFrame) {
+        throw new Error('Access Denied: Invalid sender');
+    }
+    const url = event.senderFrame.url;
+    const normalizedUrl = url.toLowerCase().replace(/\\/g, '/');
+    const isIndexHtml = normalizedUrl.includes('ui/index.html');
+    const isAboutHtml = normalizedUrl.includes('ui/about.html');
+    if (!normalizedUrl.startsWith('file://') || (!isIndexHtml && !isAboutHtml)) {
+        throw new Error('Access Denied: Unauthorized sender origin.');
+    }
+}
+
+// Override ipcMain.handle and ipcMain.on to secure all IPC channels automatically
+const originalHandle = ipcMain.handle.bind(ipcMain);
+ipcMain.handle = (channel, handler) => {
+    return originalHandle(channel, async (event, ...args) => {
+        verifySender(event);
+        return handler(event, ...args);
+    });
+};
+
+const originalOn = ipcMain.on.bind(ipcMain);
+ipcMain.on = (channel, handler) => {
+    return originalOn(channel, (event, ...args) => {
+        try {
+            verifySender(event);
+            handler(event, ...args);
+        } catch (e) {
+            console.error(`[main] Blocked unauthorized message on channel ${channel}:`, e.message);
+        }
+    });
+};
 
 let desktopNotificationsEnabled = true;
 let mainWindow;
@@ -101,6 +137,73 @@ function relayConversionProgress(payload) {
     }
 }
 
+let aboutWindow = null;
+
+function createAboutWindow() {
+    if (aboutWindow && !aboutWindow.isDestroyed()) {
+        aboutWindow.focus();
+        return;
+    }
+
+    aboutWindow = new BrowserWindow({
+        width: 480,
+        height: 540,
+        resizable: false,
+        minimizable: false,
+        maximizable: false,
+        title: 'About ConvertHub',
+        parent: mainWindow,
+        modal: true,
+        icon: appIconPath,
+        webPreferences: {
+            preload: preloadPath,
+            contextIsolation: true,
+            nodeIntegration: false
+        }
+    });
+
+    aboutWindow.setMenuBarVisibility(false);
+    aboutWindow.loadFile(path.join(__dirname, 'ui/about.html'));
+
+    aboutWindow.on('closed', () => {
+        aboutWindow = null;
+    });
+}
+
+function setupApplicationMenu() {
+    const template = [
+        {
+            label: 'File',
+            submenu: [
+                { role: 'quit' }
+            ]
+        },
+        {
+            label: 'Edit',
+            submenu: [
+                { role: 'undo' },
+                { role: 'redo' },
+                { type: 'separator' },
+                { role: 'cut' },
+                { role: 'copy' },
+                { role: 'paste' },
+                { role: 'selectAll' }
+            ]
+        },
+        {
+            label: 'Help',
+            submenu: [
+                {
+                    label: 'About ConvertHub',
+                    click: () => createAboutWindow()
+                }
+            ]
+        }
+    ];
+    const menu = Menu.buildFromTemplate(template);
+    Menu.setApplicationMenu(menu);
+}
+
 function createWindow() {
     console.log('[main] Creating window with preload:', preloadPath);
     mainWindow = new BrowserWindow({
@@ -138,7 +241,15 @@ app.whenReady().then(() => {
             const url = new URL(request.url);
             const filePath = url.searchParams.get('path');
             if (!filePath) return new Response('Path missing', { status: 400 });
-            return net.fetch(pathToFileURL(filePath).toString());
+            
+            const resolvedPath = path.resolve(filePath);
+            const ext = path.extname(resolvedPath).toLowerCase();
+            const allowedExts = ['.png', '.jpg', '.jpeg', '.webp', '.bmp', '.gif', '.pdf', '.mp3', '.wav', '.ogg', '.aac', '.mp4', '.mkv', '.webm', '.mov'];
+            if (!allowedExts.includes(ext)) {
+                return new Response('Forbidden: Invalid file type or extension', { status: 403 });
+            }
+            
+            return net.fetch(pathToFileURL(resolvedPath).toString());
         } catch (e) {
             return new Response('Error: ' + e.message, { status: 500 });
         }
@@ -196,7 +307,19 @@ app.whenReady().then(() => {
         const res = await dialog.showOpenDialog(mainWindow, { properties: ['openFile', 'multiSelections'] });
         return res.canceled ? [] : res.filePaths;
     });
-    ipcMain.handle('open-folder', (_e, p) => shell.openPath(p));
+    ipcMain.handle('open-folder', async (_e, p) => {
+        try {
+            const resolvedPath = path.resolve(p);
+            const stat = await fs.promises.stat(resolvedPath);
+            if (!stat.isDirectory()) {
+                throw new Error('Access Denied: Path is not a directory.');
+            }
+            return await shell.openPath(resolvedPath);
+        } catch (e) {
+            console.error('[main] open-folder blocked:', e.message);
+            return '';
+        }
+    });
     ipcMain.handle('path-exists', async (_e, { path: p }) => {
         try { await fs.promises.access(p, fs.constants.F_OK); return true; } catch { return false; }
     });
@@ -205,6 +328,15 @@ app.whenReady().then(() => {
     });
     ipcMain.handle('get-default-output', () => app.getPath('downloads'));
     ipcMain.handle('get-app-version', () => app.getVersion());
+    ipcMain.handle('open-external', (event, url) => {
+        const allowedDomains = ['github.com', 'ffmpeg.org', 'libreoffice.org', '7-zip.org'];
+        try {
+            const parsed = new URL(url);
+            if (allowedDomains.some(d => parsed.hostname === d || parsed.hostname.endsWith('.' + d))) {
+                shell.openExternal(url);
+            }
+        } catch (_) {}
+    });
 
     // History & Presets
     ipcMain.handle('get-history', () => getHistoryStore().getHistory());
@@ -263,7 +395,19 @@ app.whenReady().then(() => {
     // Delete file handler
     ipcMain.handle('delete-file', async (_e, { filePath }) => {
         try {
-            await fs.promises.rm(filePath, { force: true });
+            const resolvedPath = path.resolve(filePath);
+            const downloadsPath = app.getPath('downloads');
+            const userDataPath = app.getPath('userData');
+            const tempPath = os.tmpdir();
+            
+            const isAllowed = resolvedPath.startsWith(downloadsPath) ||
+                              resolvedPath.startsWith(userDataPath) ||
+                              resolvedPath.startsWith(tempPath);
+                              
+            if (!isAllowed) {
+                throw new Error('Access Denied: Cannot delete files outside allowed user spaces.');
+            }
+            await fs.promises.rm(resolvedPath, { force: true });
             return { success: true };
         } catch (e) {
             return { success: false, error: e.message };
@@ -271,7 +415,20 @@ app.whenReady().then(() => {
     });
 
     // Open path handler
-    ipcMain.handle('open:path', (_e, p) => shell.openPath(p));
+    ipcMain.handle('open:path', async (_e, p) => {
+        try {
+            const resolvedPath = path.resolve(p);
+            const ext = path.extname(resolvedPath).toLowerCase();
+            const blockedExts = ['.exe', '.bat', '.cmd', '.msi', '.lnk', '.vbs', '.js', '.wsf', '.sh'];
+            if (blockedExts.includes(ext)) {
+                throw new Error('Access Denied: Opening executable files is disabled for security.');
+            }
+            return await shell.openPath(resolvedPath);
+        } catch (e) {
+            console.error('[main] open:path blocked:', e.message);
+            return '';
+        }
+    });
 
     // Register global history listener once app is ready
     const manager = getConversionManager();
@@ -295,6 +452,7 @@ app.whenReady().then(() => {
     });
 
     createWindow();
+    setupApplicationMenu();
 });
 
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
@@ -303,5 +461,24 @@ app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) creat
 nativeTheme.on('updated', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('system-theme-updated', nativeTheme.shouldUseDarkColors ? 'dark' : 'light');
+    }
+});
+
+app.on('will-quit', () => {
+    try {
+        const tempDir = os.tmpdir();
+        const files = fs.readdirSync(tempDir);
+        for (const file of files) {
+            if (file.startsWith('converthub-archive-') || file.startsWith('converthub_pdf_')) {
+                const fullPath = path.join(tempDir, file);
+                try {
+                    fs.rmSync(fullPath, { recursive: true, force: true });
+                } catch (e) {
+                    // Ignore individual file removal errors on quit
+                }
+            }
+        }
+    } catch (err) {
+        console.error('[main] Failed to clean up temp files on exit:', err);
     }
 });

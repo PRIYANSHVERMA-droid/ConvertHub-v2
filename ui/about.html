@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About ConvertHub</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 24px;
+            -webkit-app-region: drag;
+        }
+
+        button, a {
+            -webkit-app-region: no-drag;
+        }
+
+        .about-card {
+            width: 100%;
+            height: 100%;
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            backdrop-filter: var(--panel-blur);
+            border-radius: 16px;
+            padding: 24px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+
+        .header-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .app-icon {
+            width: 64px;
+            height: 64px;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25));
+        }
+
+        .app-title-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .app-name {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: var(--logo-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .app-version {
+            font-size: 12px;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-muted);
+            padding: 2px 8px;
+            border-radius: 12px;
+            border: 1px solid var(--panel-border);
+        }
+
+        .tagline {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        .divider {
+            width: 100%;
+            height: 1px;
+            background: var(--panel-border);
+            margin: 12px 0;
+        }
+
+        .engines-section {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .section-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .engine-list {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .engine-item {
+            background: var(--card-bg, rgba(255, 255, 255, 0.04));
+            border: 1px solid var(--panel-border);
+            padding: 6px 12px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .badge-lgpl {
+            background: rgba(168, 85, 247, 0.15);
+            color: #c084fc;
+            border: 1px solid rgba(168, 85, 247, 0.3);
+        }
+
+        .badge-mpl {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .links-row {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            width: 100%;
+        }
+
+        .legal-link {
+            color: var(--accent-video, #3b82f6);
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 500;
+            transition: opacity 0.2s ease;
+            cursor: pointer;
+        }
+
+        .legal-link:hover {
+            text-decoration: underline;
+            opacity: 0.85;
+        }
+
+        .footer-text {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .close-btn {
+            background: var(--primary-btn);
+            color: #ffffff;
+            border: none;
+            padding: 8px 32px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s ease, filter 0.2s ease;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+        }
+
+        .close-btn:hover {
+            filter: brightness(1.1);
+        }
+
+        .close-btn:active {
+            transform: scale(0.97);
+        }
+    </style>
+</head>
+<body data-theme="dark">
+    <div class="about-card">
+        <!-- 1, 2, 3, 4: Icon, App Name, Version, Tagline -->
+        <div class="header-section">
+            <img src="../assets/app-icon.ico" alt="ConvertHub Icon" class="app-icon" onerror="this.style.display='none'; document.getElementById('svg-fallback').style.display='block';">
+            <svg id="svg-fallback" style="display:none;" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="app-icon"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+            <div class="app-title-group">
+                <span class="app-name">ConvertHub v2</span>
+                <span id="app-version" class="app-version">v2.1</span>
+            </div>
+            <p class="tagline">Offline-first file conversion & PDF toolkit</p>
+        </div>
+
+        <!-- 5: Horizontal divider -->
+        <div class="divider"></div>
+
+        <!-- 6: Bundled engines section -->
+        <div class="engines-section">
+            <span class="section-title">Bundled Engines</span>
+            <div class="engine-list">
+                <div class="engine-item">
+                    <span>FFmpeg</span>
+                    <span class="badge badge-lgpl">LGPL-2.1</span>
+                </div>
+                <div class="engine-item">
+                    <span>LibreOffice</span>
+                    <span class="badge badge-mpl">MPL-2.0</span>
+                </div>
+                <div class="engine-item">
+                    <span>7-Zip</span>
+                    <span class="badge badge-lgpl">LGPL-2.1</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 7: Horizontal divider -->
+        <div class="divider"></div>
+
+        <!-- 8: Three links in a row -->
+        <div class="links-row">
+            <a id="link-privacy" class="legal-link" href="#">Privacy Policy</a>
+            <a id="link-terms" class="legal-link" href="#">Terms of Use</a>
+            <a id="link-licenses" class="legal-link" href="#">Third-Party Licenses</a>
+        </div>
+
+        <!-- 9: Footer line -->
+        <p class="footer-text">© 2025 Priyansh Verma — MIT License</p>
+
+        <!-- 10: Close button -->
+        <button id="close-btn" class="close-btn">Close</button>
+    </div>
+
+    <script src="about.js"></script>
+</body>
+</html>

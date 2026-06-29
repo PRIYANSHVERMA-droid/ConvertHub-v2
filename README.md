@@ -238,6 +238,12 @@ ConvertHub v2
 - ⚡ **Batch Image Workflows:** Extending the queue manager to run batch cropping, resizing, and watermarking across multiple folders of images in parallel.
 - ⚡ **Batch PDF Utilities:** Extending the queue manager to run watermarking and compressions on multiple PDFs in parallel.
 
+## 📋 Legal
+
+- [Privacy Policy](PRIVACY.md) — No data collection. 100% offline.
+- [Terms of Use](TERMS.md) — MIT licensed. Use responsibly.
+- [Third-Party Licenses](THIRD_PARTY_LICENSES.md) — FFmpeg, LibreOffice, 7-Zip attributions.
+
 ---
 
 ## 🤝 Contributing

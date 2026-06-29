@@ -443,6 +443,22 @@ function detectTypeFromExtension(ext) {
     return null;
 }
 
+async function checkDiskSpace(targetDir, requiredBytes = 10485760) {
+    try {
+        if (typeof fs.promises.statfs === 'function') {
+            const stats = await fs.promises.statfs(targetDir);
+            const freeBytes = Number(stats.bavail) * Number(stats.bsize);
+            if (freeBytes > 0 && freeBytes < requiredBytes) {
+                throw new Error(`Insufficient disk space in destination folder. Required at least ${Math.round(requiredBytes / (1024 * 1024))} MB.`);
+            }
+        }
+    } catch (err) {
+        if (err.message && err.message.includes('Insufficient disk space')) {
+            throw err;
+        }
+    }
+}
+
 async function validateRequest({ inputPath, outputPath, format, type }) {
     if (!inputPath || typeof inputPath !== 'string') {
         throw new Error('Missing input file path.');
@@ -481,6 +497,7 @@ async function validateRequest({ inputPath, outputPath, format, type }) {
     }
 
     await ensureDirectoryExists(path.dirname(outputPath));
+    await checkDiskSpace(path.dirname(outputPath), Math.max(10485760, stats.size));
 
     return normalizedFormat;
 }
@@ -803,9 +820,21 @@ function runFFmpegConversionAttempt({ ffmpegPath, inputPath, outputPath, codecAr
         const proc = spawn(ffmpegPath, args, { windowsHide: true });
         registerActiveProcess(controller, proc);
 
+        const timeoutMs = 600000; // 10 minute watchdog timeout
+        const timeoutId = setTimeout(() => {
+            console.warn(`[conversionManager] FFmpeg timed out for ${inputPath}`);
+            terminateChildProcess(proc);
+        }, timeoutMs);
+
+        const cleanupTimer = () => clearTimeout(timeoutId);
+
         proc.stderr.on('data', (chunk) => {
             const msg = chunk.toString();
-            stderrOutput += msg;
+            if (stderrOutput.length < 1048576) {
+                stderrOutput += msg;
+            } else {
+                stderrOutput = stderrOutput.substring(msg.length) + msg;
+            }
 
             if (totalDuration === 0) {
                 totalDuration = parseDuration(stderrOutput);
@@ -821,6 +850,7 @@ function runFFmpegConversionAttempt({ ffmpegPath, inputPath, outputPath, codecAr
         });
 
         proc.on('error', (error) => {
+            cleanupTimer();
             if (controller?.cancelled) {
                 reject(createCancellationError(controller.cancelReason));
                 return;
@@ -832,6 +862,7 @@ function runFFmpegConversionAttempt({ ffmpegPath, inputPath, outputPath, codecAr
         });
 
         proc.on('close', async (code) => {
+            cleanupTimer();
             if (controller?.cancelled) {
                 await deleteFileIfExists(outputPath);
                 reject(createCancellationError(controller.cancelReason));
@@ -861,19 +892,36 @@ function runProcess(executable, args, { onStdout, onStderr, controller } = {}) {
         let stdout = '';
         let stderr = '';
 
+        const timeoutMs = 300000; // 5 minute watchdog timeout
+        const timeoutId = setTimeout(() => {
+            console.warn(`[conversionManager] Process ${executable} timed out`);
+            terminateChildProcess(proc);
+        }, timeoutMs);
+
+        const cleanupTimer = () => clearTimeout(timeoutId);
+
         proc.stdout.on('data', (chunk) => {
             const text = chunk.toString();
-            stdout += text;
+            if (stdout.length < 1048576) {
+                stdout += text;
+            } else {
+                stdout = stdout.substring(text.length) + text;
+            }
             if (onStdout) onStdout(text);
         });
 
         proc.stderr.on('data', (chunk) => {
             const text = chunk.toString();
-            stderr += text;
+            if (stderr.length < 1048576) {
+                stderr += text;
+            } else {
+                stderr = stderr.substring(text.length) + text;
+            }
             if (onStderr) onStderr(text);
         });
 
         proc.on('error', (error) => {
+            cleanupTimer();
             if (controller?.cancelled) {
                 reject(createCancellationError(controller.cancelReason));
                 return;
@@ -881,6 +929,7 @@ function runProcess(executable, args, { onStdout, onStderr, controller } = {}) {
             reject(error);
         });
         proc.on('close', (code) => {
+            cleanupTimer();
             if (controller?.cancelled) {
                 reject(createCancellationError(controller.cancelReason));
                 return;
@@ -992,6 +1041,7 @@ async function renameIfNeeded(sourcePath, targetPath) {
 
 function convertWithLibreOffice({ inputPath, outputPath, format, onProgress, controller }) {
     return new Promise(async (resolve, reject) => {
+        let tempProfilePath = null;
         try {
             throwIfCancelled(controller);
 
@@ -1000,12 +1050,14 @@ function convertWithLibreOffice({ inputPath, outputPath, format, onProgress, con
                 return reject(new Error('LibreOffice not found at: soffice'));
             }
 
+            tempProfilePath = path.join(os.tmpdir(), `converthub-libreoffice-profile-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`);
             const normalizedFormat = normalizeFormat(format);
             const outputDir = path.dirname(outputPath);
             const baseName = path.parse(inputPath).name;
             const expectedOutput = path.join(outputDir, `${baseName}.${normalizedFormat}`);
             const convertTarget = DOCUMENT_FILTERS[normalizedFormat] || normalizedFormat;
             const args = [
+                `-env:UserInstallation=file:///${tempProfilePath.replace(/\\/g, '/')}`,
                 '--headless',
                 '--norestore',
                 '--nolockcheck',
@@ -1024,6 +1076,12 @@ function convertWithLibreOffice({ inputPath, outputPath, format, onProgress, con
             let stdoutOutput = '';
             let stderrOutput = '';
 
+            const cleanupProfile = () => {
+                if (tempProfilePath && fs.existsSync(tempProfilePath)) {
+                    fs.promises.rm(tempProfilePath, { recursive: true, force: true }).catch(() => undefined);
+                }
+            };
+
             proc.stdout.on('data', (chunk) => {
                 stdoutOutput += chunk.toString();
                 reportProgress(65);
@@ -1034,6 +1092,7 @@ function convertWithLibreOffice({ inputPath, outputPath, format, onProgress, con
             });
 
             proc.on('error', (error) => {
+                cleanupProfile();
                 if (controller?.cancelled) {
                     reject(createCancellationError(controller.cancelReason));
                     return;
@@ -1042,6 +1101,7 @@ function convertWithLibreOffice({ inputPath, outputPath, format, onProgress, con
             });
 
             proc.on('close', async (code) => {
+                cleanupProfile();
                 if (controller?.cancelled) {
                     await deleteFileIfExists(expectedOutput);
                     reject(createCancellationError(controller.cancelReason));
@@ -1062,6 +1122,9 @@ function convertWithLibreOffice({ inputPath, outputPath, format, onProgress, con
                 resolve({ success: true, outputPath: finalOutput, format: normalizedFormat });
             });
         } catch (error) {
+            if (tempProfilePath && fs.existsSync(tempProfilePath)) {
+                fs.promises.rm(tempProfilePath, { recursive: true, force: true }).catch(() => undefined);
+            }
             reject(error);
         }
     });
@@ -1136,6 +1199,19 @@ function convertWithSevenZip({ inputPath, outputPath, format, onProgress, contro
 
                 reportProgress(100);
                 return resolve({ success: true, outputPath: finalOutput, format: normalizedFormat });
+            }
+
+            if (ARCHIVE_FORMATS.has(inputExt)) {
+                // Zip Slip Pre-Extraction Inspection
+                const listResult = await runProcess(sevenZipPath, ['l', inputPath], { controller });
+                if (listResult.stdout) {
+                    const lines = listResult.stdout.split('\n');
+                    for (const line of lines) {
+                        if (line.includes('..') || line.includes(':/') || line.includes(':\\')) {
+                            throw new Error('Security Error: Archive contains path traversal components (Zip Slip attack vector).');
+                        }
+                    }
+                }
             }
 
             tempRoot = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'converthub-archive-'));

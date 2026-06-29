@@ -915,8 +915,8 @@
                 div.innerHTML = `
                     <div class="recent-icon ${iconInfo.class}"><i class="fa-regular ${iconInfo.icon}"></i></div>
                     <div class="recent-info">
-                        <span class="recent-name" title="${item.inputFiles[0]?.name || 'File'}">${truncateName(item.inputFiles[0]?.name || 'File', 22)}</span>
-                        <span class="recent-meta">→ ${item.outputFormat.toUpperCase()} • ${timeStr}</span>
+                        <span class="recent-name" title="${escapeHtml(item.inputFiles[0]?.name || 'File')}">${escapeHtml(truncateName(item.inputFiles[0]?.name || 'File', 22))}</span>
+                        <span class="recent-meta">→ ${escapeHtml(item.outputFormat || '').toUpperCase()} • ${timeStr}</span>
                     </div>
                     <div class="recent-actions">
                         <button class="recent-action-btn rerun-btn" title="Re-run conversion"><i class="fa-solid fa-rotate-right"></i></button>
@@ -1393,7 +1393,7 @@
         el.draggable = item.status === 'ready' && !isConverting;
     }
 
-    function createGroupSection(group, isMixedBatch) {
+    function createGroupSection(group, isMixedBatch, renderState) {
         const wrapper = document.createElement('div');
         wrapper.className = 'queue-group';
 
@@ -1430,9 +1430,28 @@
             wrapper.appendChild(header);
         }
 
+        const maxTotalRender = 50;
+        let skippedCount = 0;
+
         group.items.forEach((item) => {
-            wrapper.appendChild(createQueueItemElement(item));
+            if (renderState.renderedCount < maxTotalRender) {
+                wrapper.appendChild(createQueueItemElement(item));
+                renderState.renderedCount++;
+            } else {
+                skippedCount++;
+            }
         });
+
+        if (skippedCount > 0) {
+            const footerNote = document.createElement('div');
+            footerNote.style.padding = '8px 14px';
+            footerNote.style.fontSize = '12px';
+            footerNote.style.color = 'var(--text-muted, #94a3b8)';
+            footerNote.style.fontStyle = 'italic';
+            footerNote.textContent = `... and ${skippedCount} additional files in this group (hidden to preserve app responsiveness). All files will be converted.`;
+            wrapper.appendChild(footerNote);
+        }
+
         return wrapper;
     }
 
@@ -1473,9 +1492,10 @@
         const supportedGroups = groups.filter((group) => group.type !== 'unsupported');
         const isMixedBatch = supportedGroups.length > 1;
         const fragment = document.createDocumentFragment();
+        const renderState = { renderedCount: 0 };
 
         groups.forEach((group) => {
-            fragment.appendChild(createGroupSection(group, isMixedBatch));
+            fragment.appendChild(createGroupSection(group, isMixedBatch, renderState));
         });
 
         queueList.replaceChildren(queueEmpty, fragment);
@@ -2352,6 +2372,11 @@
                 await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
                 const thumb = canvas.toDataURL('image/png');
 
+                // Yield to event loop to keep UI smooth and responsive
+                if (i % 2 === 0) {
+                    await new Promise((resolve) => setTimeout(resolve, 0));
+                }
+
                 const thumbWrap = document.createElement('div');
                 thumbWrap.className = 'pdf-bank-thumb';
                 thumbWrap.draggable = true;
@@ -2396,13 +2421,35 @@
             card.draggable = true;
             card.dataset.id = p.id;
             card.innerHTML = `
-                <img src="${p.thumb || ''}" alt="page-${p.pageIndex+1}">
-                <div class="page-label">${p.name} • ${p.pageIndex + 1}</div>
+                <img src="${escapeHtml(p.thumb || '')}" alt="page-${p.pageIndex+1}">
+                <div class="page-label">${escapeHtml(p.name)} • ${p.pageIndex + 1}</div>
             `;
 
             card.addEventListener('dragstart', () => {
                 pdfPageDragId = p.id;
                 card.classList.add('queue-item-dragging');
+            });
+            card.addEventListener('dragover', (ev) => {
+                ev.preventDefault();
+                if (pdfPageDragId && pdfPageDragId !== p.id) {
+                    card.classList.add('queue-item-drag-over');
+                }
+            });
+            card.addEventListener('dragleave', () => {
+                card.classList.remove('queue-item-drag-over');
+            });
+            card.addEventListener('drop', (ev) => {
+                ev.preventDefault();
+                card.classList.remove('queue-item-drag-over');
+                if (pdfPageDragId && pdfPageDragId !== p.id) {
+                    const srcIdx = pdfMergedPages.findIndex((x) => x.id === pdfPageDragId);
+                    const targetIdx = pdfMergedPages.findIndex((x) => x.id === p.id);
+                    if (srcIdx > -1 && targetIdx > -1) {
+                        const [moved] = pdfMergedPages.splice(srcIdx, 1);
+                        pdfMergedPages.splice(targetIdx, 0, moved);
+                        renderMergedPagesList();
+                    }
+                }
             });
             card.addEventListener('dragend', () => {
                 pdfPageDragId = null;
@@ -4196,7 +4243,7 @@
                 <div class="compress-item-info">
                     <i class="fa-solid fa-file-pdf compress-item-icon"></i>
                     <div class="compress-item-meta">
-                        <span class="compress-item-name" title="${item.file.name}">${truncateName(item.file.name, 45)}</span>
+                        <span class="compress-item-name" title="${escapeHtml(item.file.name)}">${escapeHtml(truncateName(item.file.name, 45))}</span>
                         <span class="compress-item-size-meta">${sizeMeta}</span>
                     </div>
                 </div>

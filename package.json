@@ -35,7 +35,8 @@
     "win": {
       "target": "nsis",
       "icon": "assets/app-icon.ico",
-      "artifactName": "ConvertHub-v2-Setup-${version}.${ext}"
+      "artifactName": "ConvertHub-v2-Setup-${version}.${ext}",
+      "verifyUpdateCodeSignature": true
     },
     "nsis": {
       "oneClick": false,
