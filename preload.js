@@ -178,8 +178,35 @@ const appBridge = {
     }
 };
 
+const videoProgressListeners = new Map();
+
+const videoAPI = {
+    trim: (options) => ipcRenderer.invoke('video:trim', options),
+    merge: (options) => ipcRenderer.invoke('video:merge', options),
+    extractAudio: (options) => ipcRenderer.invoke('video:extractAudio', options),
+    compress: (options) => ipcRenderer.invoke('video:compress', options),
+    hardcodeSubtitles: (options) => ipcRenderer.invoke('video:hardcodeSubtitles', options),
+    cancel: (jobId) => ipcRenderer.invoke('video:cancel', { jobId }),
+    getActiveJobs: () => ipcRenderer.invoke('video:getActiveJobs'),
+    getMediaInfo: (filePath) => ipcRenderer.invoke('video:getMediaInfo', { filePath }),
+    onProgress: (callback) => {
+        const wrapper = (_, data) => callback(data);
+        videoProgressListeners.set(callback, wrapper);
+        ipcRenderer.on('video:progress', wrapper);
+    },
+    offProgress: (callback) => {
+        const wrapper = videoProgressListeners.get(callback);
+        if (wrapper) {
+            ipcRenderer.removeListener('video:progress', wrapper);
+            videoProgressListeners.delete(callback);
+        }
+    }
+};
+
+contextBridge.exposeInMainWorld('videoAPI', videoAPI);
 contextBridge.exposeInMainWorld('app', appBridge);
 contextBridge.exposeInMainWorld('electronAPI', appBridge);
 
-console.log('[preload] window.app and window.electronAPI exposed');
+console.log('[preload] window.app, window.electronAPI, and window.videoAPI exposed');
+
 

@@ -15,6 +15,62 @@
             <div class="splash-spinner" role="status" aria-label="Loading"></div>
         </div>
     </div>
+    <!-- Legal Terms & Privacy Acceptance Modal -->
+    <div id="terms-overlay" class="hidden" role="dialog" aria-modal="true" aria-labelledby="terms-title">
+        <div class="terms-card">
+            <div class="terms-header">
+                <div class="terms-icon"><i class="fa-solid fa-user-shield"></i></div>
+                <h2 id="terms-title" class="terms-title">Welcome to ConvertHub v2</h2>
+                <p class="terms-subtitle">Please accept the Terms of Use and Privacy Policy to continue.</p>
+            </div>
+            
+            <div class="terms-body">
+                <p>ConvertHub v2 is a <strong>strictly offline-first</strong> universal file converter. All operations and conversions happen entirely on your local machine; your files and data never leave your computer.</p>
+                <p>To use this application, you must agree to our Terms of Use and Privacy Policy. Click the links below to view the official documents:</p>
+                
+                <div class="terms-links">
+                    <button class="terms-link-btn" id="terms-view-privacy" type="button">
+                        <i class="fa-solid fa-shield-halved"></i> Privacy Policy
+                    </button>
+                    <button class="terms-link-btn" id="terms-view-terms" type="button">
+                        <i class="fa-solid fa-file-contract"></i> Terms of Use
+                    </button>
+                </div>
+            </div>
+
+            <div class="terms-footer">
+                <label class="terms-checkbox-label" for="terms-checkbox">
+                    <input type="checkbox" id="terms-checkbox" class="glass-checkbox">
+                    <span class="checkbox-text">I have read and agree to the Terms of Use and Privacy Policy</span>
+                </label>
+                
+                <div class="terms-actions">
+                    <button id="terms-decline-btn" class="terms-btn terms-btn-decline" type="button">Decline & Exit</button>
+                    <button id="terms-accept-btn" class="terms-btn terms-btn-accept" type="button" disabled>Accept & Continue</button>
+                </div>
+            </div>
+        </div>
+        <!-- Legal Content Viewer (In-App) -->
+        <div id="legal-viewer" class="terms-card hidden">
+            <div class="terms-header">
+                <div class="terms-icon" id="legal-viewer-icon"><i class="fa-solid fa-file-contract"></i></div>
+                <h2 id="legal-viewer-title" class="terms-title">Document Title</h2>
+                <p id="legal-viewer-subtitle" class="terms-subtitle">Last updated: June 30, 2026</p>
+            </div>
+            
+            <div class="terms-body scrollable-legal-content" id="legal-viewer-body">
+                <!-- Content will be injected dynamically -->
+            </div>
+
+            <div class="terms-footer">
+                <div class="terms-actions">
+                    <button id="legal-viewer-back-btn" class="terms-btn terms-btn-decline" type="button" style="display: flex; align-items: center; gap: 8px; justify-content: center;">
+                        <i class="fa-solid fa-arrow-left"></i> Back to Agreement
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- Animated Background Blobs -->
     <div class="background-container">
         <div class="glow-blob blob-1"></div>
@@ -102,15 +158,19 @@
                             <span class="badge image-watermark"><i class="fa-solid fa-signature"></i> Watermark</span>
                         </div>
                     </div>
-        <!-- Video Toolkit Card -->
-        <div class="launchpad-card card-video coming-soon no-drag" id="launch-video-btn">
-            <div class="card-glow"></div>
-            <div class="card-icon"><i class="fa-solid fa-film"></i></div>
-            <h3>Smart Video Toolkit</h3>
-            <p>Coming soon – powerful video conversion features.</p>
-            <div class="coming-soon-badge">Coming Soon</div>
-        </div>
-        </div>
+                    <!-- Video Toolkit Card -->
+                    <div class="launchpad-card card-video no-drag" id="launch-video-btn">
+                        <div class="card-glow"></div>
+                        <div class="card-icon"><i class="fa-solid fa-film"></i></div>
+                        <h3>Smart Video Toolkit</h3>
+                        <p>Trim, merge, extract audio, compress, or hardcode subtitles with ease.</p>
+                        <div class="card-badges">
+                            <span class="badge video-cut"><i class="fa-solid fa-scissors"></i> Trim</span>
+                            <span class="badge video-gif"><i class="fa-solid fa-layer-group"></i> Merge</span>
+                            <span class="badge video-audio"><i class="fa-solid fa-music"></i> Audio</span>
+                        </div>
+                    </div>
+                </div>
                 
                 <div class="launchpad-footer">
                     <label class="toggle-row no-drag" for="bypass-launchpad-checkbox">
@@ -1197,6 +1257,11 @@
                     </aside>
                 </div>
             </div>
+        </div>
+
+        <!-- Video Toolkit Workspace -->
+        <div id="video-toolkit-workspace" class="workspace-panel hidden">
+            <!-- Loaded dynamically on lazy initialization -->
         </div>
 
         <div class="settings-overlay hidden" id="settings-overlay">

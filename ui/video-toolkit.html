@@ -1,0 +1,369 @@
+<div class="pdf-workspace-container">
+    <div class="pdf-workspace-header">
+        <div class="pdf-header-left">
+            <h2><i class="fa-solid fa-film text-gradient-video"></i> Video Toolkit</h2>
+            <p>Trim, merge, extract audio, compress, or hardcode subtitles offline.</p>
+        </div>
+        <div class="pdf-mode-tabs no-drag" id="video-mode-tabs">
+            <button class="pdf-tab active" data-mode="trim" id="video-tab-trim"><i class="fa-solid fa-scissors"></i> Trim</button>
+            <button class="pdf-tab" data-mode="merge" id="video-tab-merge"><i class="fa-solid fa-layer-group"></i> Merge</button>
+            <button class="pdf-tab" data-mode="audio" id="video-tab-audio"><i class="fa-solid fa-music"></i> Extract Audio</button>
+            <button class="pdf-tab" data-mode="compress" id="video-tab-compress"><i class="fa-solid fa-compress"></i> Compress</button>
+            <button class="pdf-tab" data-mode="subtitles" id="video-tab-subtitles"><i class="fa-regular fa-closed-captioning"></i> Subtitles</button>
+        </div>
+    </div>
+
+    <div class="pdf-layout-grid">
+        <!-- Main Area (Left) -->
+        <main class="pdf-main-area" style="flex: 1; min-width: 0;">
+            <!-- Trim Panel -->
+            <div id="video-panel-trim" class="pdf-panel video-panel">
+                <div class="pdf-upload-zone no-drag" id="video-trim-dropzone">
+                    <div class="upload-content">
+                        <div class="pdf-drop-icon"><i class="fa-solid fa-film"></i></div>
+                        <h3>Trim Video Clip</h3>
+                        <p>Drop MP4, MKV, MOV, AVI, or WebM files here.</p>
+                        <button class="pdf-browse-btn no-drag" id="video-trim-browse-btn" type="button">
+                            <i class="fa-solid fa-plus"></i> Add Video
+                        </button>
+                        <span class="pdf-drop-note"><i class="fa-solid fa-lock"></i> Drag and drop files or browse from your device</span>
+                    </div>
+                    <input type="file" id="video-trim-input" accept="video/*" class="hidden">
+                </div>
+
+                <!-- Media Info Card & Timeline Scrubber -->
+                <div id="video-trim-settings" class="video-settings-container hidden" style="margin-top: 20px;">
+                    <!-- Media Info Card -->
+                    <div class="media-info-card" id="video-trim-info-card"></div>
+                    
+                    <!-- Trim controls -->
+                    <div class="form-group" style="margin-top: 25px;">
+                        <label>Trim Range</label>
+                        <div class="trim-slider-container">
+                            <div class="trim-slider-track" id="trim-slider-track"></div>
+                            <input type="range" id="trim-start" min="0" max="100" value="0" step="0.1" class="trim-slider-handle">
+                            <input type="range" id="trim-end" min="0" max="100" value="100" step="0.1" class="trim-slider-handle">
+                        </div>
+                        <div class="trim-time-labels" style="display: flex; justify-content: space-between; margin-top: 10px;">
+                            <span id="trim-start-label">00:00:00</span>
+                            <span id="trim-duration-label" style="font-weight: 600; color: var(--accent-color);">Selected: 0.0s</span>
+                            <span id="trim-end-label">00:00:00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Merge Panel -->
+            <div id="video-panel-merge" class="pdf-panel video-panel hidden">
+                <div class="pdf-upload-zone no-drag" id="video-merge-dropzone">
+                    <div class="upload-content">
+                        <div class="pdf-drop-icon"><i class="fa-solid fa-video"></i></div>
+                        <h3>Merge Video Clips</h3>
+                        <p>Drop multiple MP4, MKV, MOV, AVI, or WebM files here.</p>
+                        <button class="pdf-browse-btn no-drag" id="video-merge-browse-btn" type="button">
+                            <i class="fa-solid fa-plus"></i> Add Videos
+                        </button>
+                        <span class="pdf-drop-note"><i class="fa-solid fa-lock"></i> Drag and drop files or browse from your device</span>
+                    </div>
+                    <input type="file" id="video-merge-input" accept="video/*" multiple class="hidden">
+                </div>
+
+                <!-- Merge Files List -->
+                <div id="video-merge-list-container" class="video-settings-container hidden" style="margin-top: 20px;">
+                    <div class="grid-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h4 id="video-merge-count">0 Videos Selected</h4>
+                        <button class="clear-btn no-drag" id="video-merge-clear-btn"><i class="fa-solid fa-trash-can"></i> Clear All</button>
+                    </div>
+                    
+                    <div class="merge-file-list" id="video-merge-list"></div>
+
+                    <div style="margin-top: 15px;">
+                        <button class="outline-btn no-drag" id="video-merge-add-more-btn" style="padding: 8px 12px; font-size: 12px;">
+                            <i class="fa-solid fa-plus"></i> Add More Clips
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Extract Audio Panel -->
+            <div id="video-panel-audio" class="pdf-panel video-panel hidden">
+                <div class="pdf-upload-zone no-drag" id="video-audio-dropzone">
+                    <div class="upload-content">
+                        <div class="pdf-drop-icon"><i class="fa-solid fa-music"></i></div>
+                        <h3>Extract Audio Track</h3>
+                        <p>Drop MP4, MKV, MOV, AVI, or WebM files here.</p>
+                        <button class="pdf-browse-btn no-drag" id="video-audio-browse-btn" type="button">
+                            <i class="fa-solid fa-plus"></i> Select Video
+                        </button>
+                        <span class="pdf-drop-note"><i class="fa-solid fa-lock"></i> Drag and drop files or browse from your device</span>
+                    </div>
+                    <input type="file" id="video-audio-input" accept="video/*" class="hidden">
+                </div>
+
+                <div id="video-audio-settings" class="video-settings-container hidden" style="margin-top: 20px;">
+                    <div class="media-info-card" id="video-audio-info-card"></div>
+                </div>
+            </div>
+
+            <!-- Compress Panel -->
+            <div id="video-panel-compress" class="pdf-panel video-panel hidden">
+                <div class="pdf-upload-zone no-drag" id="video-compress-dropzone">
+                    <div class="upload-content">
+                        <div class="pdf-drop-icon"><i class="fa-solid fa-compress"></i></div>
+                        <h3>Compress Video File</h3>
+                        <p>Drop MP4, MKV, MOV, AVI, or WebM files here.</p>
+                        <button class="pdf-browse-btn no-drag" id="video-compress-browse-btn" type="button">
+                            <i class="fa-solid fa-plus"></i> Select Video
+                        </button>
+                        <span class="pdf-drop-note"><i class="fa-solid fa-lock"></i> Drag and drop files or browse from your device</span>
+                    </div>
+                    <input type="file" id="video-compress-input" accept="video/*" class="hidden">
+                </div>
+
+                <div id="video-compress-settings" class="video-settings-container hidden" style="margin-top: 20px;">
+                    <div class="media-info-card" id="video-compress-info-card"></div>
+                </div>
+            </div>
+
+            <!-- Subtitles Panel -->
+            <div id="video-panel-subtitles" class="pdf-panel video-panel hidden">
+                <div class="pdf-upload-zone no-drag" id="video-subtitles-dropzone">
+                    <div class="upload-content">
+                        <div class="pdf-drop-icon"><i class="fa-regular fa-closed-captioning"></i></div>
+                        <h3>Hardcode Subtitles</h3>
+                        <p>Drop MP4, MKV, MOV, AVI, or WebM files here.</p>
+                        <button class="pdf-browse-btn no-drag" id="video-subtitles-browse-btn" type="button">
+                            <i class="fa-solid fa-plus"></i> Select Video
+                        </button>
+                        <span class="pdf-drop-note"><i class="fa-solid fa-lock"></i> Drag and drop files or browse from your device</span>
+                    </div>
+                    <input type="file" id="video-subtitles-input" accept="video/*" class="hidden">
+                </div>
+
+                <div id="video-subtitles-settings" class="video-settings-container hidden" style="margin-top: 20px;">
+                    <div class="media-info-card" id="video-subtitles-info-card"></div>
+                </div>
+            </div>
+
+            <!-- Execution progress overlay/section for active panel -->
+            <div id="video-job-status-panel" class="hidden" style="margin-top: 25px; padding: 20px; background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 12px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span id="video-job-operation-label" style="font-weight: 600;">Processing Video...</span>
+                    <span id="video-job-percent-label">0%</span>
+                </div>
+                <div class="batch-progress-bar" style="margin-bottom: 15px;">
+                    <div class="batch-progress-fill" id="video-job-progress-fill" style="width: 0%;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span id="video-job-status-msg" style="font-size: 12px; opacity: 0.7;">Initializing...</span>
+                    <button class="primary-btn no-drag" id="video-job-cancel-btn" style="background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.4); color: #f87171; font-size: 12px; padding: 6px 12px;">
+                        <i class="fa-solid fa-xmark"></i> Cancel Job
+                    </button>
+                </div>
+            </div>
+
+            <!-- Success/Error alert banner -->
+            <div id="video-result-banner" class="hidden" style="margin-top: 20px; padding: 15px; border-radius: 8px; font-size: 13px; display: flex; flex-direction: column; gap: 10px;">
+                <div style="display: flex; gap: 10px; align-items: flex-start;">
+                    <i id="video-result-icon" class="fa-solid" style="font-size: 16px; margin-top: 2px;"></i>
+                    <span id="video-result-text" style="flex: 1; line-height: 1.4;"></span>
+                </div>
+                <div id="video-result-actions" class="hidden" style="display: flex; gap: 12px; margin-left: 26px;">
+                    <a href="#" id="video-result-open-folder" class="no-drag" style="color: var(--accent-color); font-weight: 600; text-decoration: none;">Open Output Folder</a>
+                </div>
+            </div>
+        </main>
+
+        <!-- Sidebar (Right) -->
+        <aside class="pdf-sidebar">
+            <!-- Trim Sidebar -->
+            <section class="pdf-sidebar-section" id="sidebar-video-trim">
+                <div class="pdf-sidebar-title">
+                    <h4><i class="fa-solid fa-scissors"></i> Trim Settings</h4>
+                </div>
+                <div class="settings-form-scroll">
+                    <!-- Reencode option -->
+                    <div class="form-group">
+                        <label class="toggle-row no-drag" for="trim-reencode-checkbox">
+                            <div class="checkbox-container">
+                                <input id="trim-reencode-checkbox" type="checkbox">
+                                <span class="checkbox-custom"></span>
+                            </div>
+                            <span class="toggle-label" style="font-size: 13px;">Enable Re-encoding</span>
+                        </label>
+                        <p class="settings-help">libx264/aac; slower but more accurate cut</p>
+                    </div>
+
+                    <!-- Output File -->
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label>Output Filename</label>
+                        <input type="text" id="video-trim-output-name" class="glass-input no-drag" placeholder="Output filename...">
+                    </div>
+                </div>
+                <div class="settings-footer-bar">
+                    <button id="video-trim-run-btn" class="primary-btn glow-btn no-drag" disabled>
+                        <i class="fa-solid fa-scissors"></i> Process Trim
+                    </button>
+                </div>
+            </section>
+
+            <!-- Merge Sidebar -->
+            <section class="pdf-sidebar-section hidden" id="sidebar-video-merge">
+                <div class="pdf-sidebar-title">
+                    <h4><i class="fa-solid fa-layer-group"></i> Merge Settings</h4>
+                </div>
+                <div class="settings-form-scroll">
+                    <!-- Output File -->
+                    <div class="form-group">
+                        <label>Output Filename</label>
+                        <input type="text" id="video-merge-output-name" class="glass-input no-drag" placeholder="merged-output.mp4" value="merged-output.mp4">
+                    </div>
+                </div>
+                <div class="settings-footer-bar">
+                    <button id="video-merge-run-btn" class="primary-btn glow-btn no-drag" disabled>
+                        <i class="fa-solid fa-layer-group"></i> Process Merge
+                    </button>
+                </div>
+            </section>
+
+            <!-- Extract Audio Sidebar -->
+            <section class="pdf-sidebar-section hidden" id="sidebar-video-audio">
+                <div class="pdf-sidebar-title">
+                    <h4><i class="fa-solid fa-music"></i> Extract Settings</h4>
+                </div>
+                <div class="settings-form-scroll">
+                    <!-- Format selector pills -->
+                    <div class="form-group">
+                        <label>Output Format</label>
+                        <div class="pill-selector no-drag" id="audio-format-pills" style="display: flex; gap: 8px;">
+                            <button class="pill-btn active" data-format="mp3">MP3</button>
+                            <button class="pill-btn" data-format="aac">AAC</button>
+                            <button class="pill-btn" data-format="wav">WAV</button>
+                            <button class="pill-btn" data-format="flac">FLAC</button>
+                        </div>
+                    </div>
+
+                    <!-- Bitrate selector -->
+                    <div class="form-group" id="audio-bitrate-group" style="margin-top: 15px;">
+                        <label>Audio Bitrate</label>
+                        <div class="pill-selector no-drag" id="audio-bitrate-pills" style="display: flex; gap: 8px;">
+                            <button class="pill-btn" data-bitrate="128k">128k</button>
+                            <button class="pill-btn active" data-bitrate="192k">192k</button>
+                            <button class="pill-btn" data-bitrate="320k">320k</button>
+                        </div>
+                    </div>
+
+                    <!-- Output File -->
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label>Output Filename</label>
+                        <input type="text" id="video-audio-output-name" class="glass-input no-drag" placeholder="Output filename...">
+                    </div>
+                </div>
+                <div class="settings-footer-bar">
+                    <button id="video-audio-run-btn" class="primary-btn glow-btn no-drag" disabled>
+                        <i class="fa-solid fa-music"></i> Extract Audio
+                    </button>
+                </div>
+            </section>
+
+            <!-- Compress Sidebar -->
+            <section class="pdf-sidebar-section hidden" id="sidebar-video-compress">
+                <div class="pdf-sidebar-title">
+                    <h4><i class="fa-solid fa-compress"></i> Compress Settings</h4>
+                </div>
+                <div class="settings-form-scroll">
+                    <!-- Quality selector pills -->
+                    <div class="form-group">
+                        <label>Compression Level</label>
+                        <div class="pill-selector no-drag" id="compress-quality-pills" style="display: flex; flex-direction: column; gap: 8px;">
+                            <button class="pill-btn" data-quality="high" style="display: flex; flex-direction: column; align-items: flex-start; padding: 8px 12px; border-radius: 8px; width: 100%;">
+                                <span style="font-weight: 600; font-size: 12px;">High (Archival)</span>
+                                <span style="font-size: 10px; opacity: 0.6; margin-top: 1px;">CRF 18 &bull; ~30% smaller</span>
+                            </button>
+                            <button class="pill-btn active" data-quality="medium" style="display: flex; flex-direction: column; align-items: flex-start; padding: 8px 12px; border-radius: 8px; width: 100%;">
+                                <span style="font-weight: 600; font-size: 12px;">Medium (Balanced)</span>
+                                <span style="font-size: 10px; opacity: 0.6; margin-top: 1px;">CRF 23 &bull; ~55% smaller</span>
+                            </button>
+                            <button class="pill-btn" data-quality="low" style="display: flex; flex-direction: column; align-items: flex-start; padding: 8px 12px; border-radius: 8px; width: 100%;">
+                                <span style="font-weight: 600; font-size: 12px;">Low (Smallest)</span>
+                                <span style="font-size: 10px; opacity: 0.6; margin-top: 1px;">CRF 28 &bull; ~70% smaller</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Resolution selector pills -->
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label>Resolution</label>
+                        <div class="pill-selector no-drag" id="compress-resolution-pills" style="display: flex; gap: 6px; flex-wrap: wrap;">
+                            <button class="pill-btn active" data-res="original">Original</button>
+                            <button class="pill-btn" data-res="1080p">1080p</button>
+                            <button class="pill-btn" data-res="720p">720p</button>
+                            <button class="pill-btn" data-res="480p">480p</button>
+                        </div>
+                    </div>
+
+                    <!-- Output File -->
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label>Output Filename</label>
+                        <input type="text" id="video-compress-output-name" class="glass-input no-drag" placeholder="Output filename...">
+                    </div>
+                </div>
+                <div class="settings-footer-bar">
+                    <button id="video-compress-run-btn" class="primary-btn glow-btn no-drag" disabled>
+                        <i class="fa-solid fa-compress"></i> Compress Video
+                    </button>
+                </div>
+            </section>
+
+            <!-- Subtitles Sidebar -->
+            <section class="pdf-sidebar-section hidden" id="sidebar-video-subtitles">
+                <div class="pdf-sidebar-title">
+                    <h4><i class="fa-regular fa-closed-captioning"></i> Subtitle Settings</h4>
+                </div>
+                <div class="settings-form-scroll">
+                    <!-- Subtitle File upload zone -->
+                    <div class="form-group">
+                        <label>Subtitle File (.SRT / .ASS / .VTT)</label>
+                        <div class="pdf-upload-zone no-drag" id="sub-file-dropzone" style="padding: 15px; border-style: dashed; min-height: 100px; height: 100px;">
+                            <div class="upload-content" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
+                                <i class="fa-solid fa-file-signature" style="font-size: 18px; margin-bottom: 4px; color: var(--accent-color);"></i>
+                                <p style="font-size: 11px; margin: 0; text-align: center;">Drop subtitle or click to browse</p>
+                            </div>
+                            <input type="file" id="sub-file-input" accept=".srt,.ass,.vtt" class="hidden">
+                        </div>
+                        <div id="selected-subtitle-details" class="hidden" style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.05); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--panel-border);">
+                            <span id="subtitle-filename" style="font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80%;">sub.srt</span>
+                            <button class="icon-btn-danger no-drag" id="remove-subtitle-btn" style="padding: 4px 8px; font-size: 10px;" title="Remove"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- Output File -->
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label>Output Filename</label>
+                        <input type="text" id="video-subtitles-output-name" class="glass-input no-drag" placeholder="Output filename...">
+                    </div>
+                </div>
+                <div class="settings-footer-bar">
+                    <button id="video-subtitles-run-btn" class="primary-btn glow-btn no-drag" disabled>
+                        <i class="fa-regular fa-closed-captioning"></i> Apply Subtitles
+                    </button>
+                </div>
+            </section>
+
+            <!-- Output Folder Section (common) -->
+            <section class="pdf-sidebar-section" id="sidebar-video-output">
+                <div class="pdf-sidebar-title">
+                    <h4><i class="fa-solid fa-folder-open"></i> Output Destination</h4>
+                </div>
+                <div class="form-group folder-group">
+                    <label>Output Folder</label>
+                    <div class="folder-input-wrapper no-drag">
+                        <input type="text" id="video-output-folder-input" readonly class="glass-input" style="height: 38px;" placeholder="Choose destination...">
+                        <button class="icon-btn-small" id="video-pick-folder-btn" title="Browse folder"><i class="fa-regular fa-folder"></i></button>
+                        <button class="icon-btn-small" id="video-open-folder-btn" title="Open folder"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
+                    </div>
+                </div>
+            </section>
+        </aside>
+    </div>
+</div>

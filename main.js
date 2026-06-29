@@ -46,6 +46,7 @@ const PROGRESS_EVENT_INTERVAL_MS = 120;
 let conversionManager = null;
 let imageProcessor = null;
 let pdfProcessor = null;
+let videoProcessor = null;
 let _historyStore = null;
 let _presetStore = null;
 const progressDispatchState = new Map();
@@ -82,6 +83,13 @@ function getPDFProcessor() {
         pdfProcessor = require('./core/pdfProcessor');
     }
     return pdfProcessor;
+}
+
+function getVideoProcessor() {
+    if (!videoProcessor) {
+        videoProcessor = require('./core/videoProcessor');
+    }
+    return videoProcessor;
 }
 
 function getTitleBarOverlayOptions(theme = 'dark') {
@@ -383,6 +391,174 @@ app.whenReady().then(() => {
         } catch (err) {
             console.error('[main] Failed to read folder images:', err);
             return { success: false, error: err.message };
+        }
+    });
+
+    // --- VIDEO TOOLKIT ---
+    ipcMain.handle('video:getMediaInfo', async (event, { filePath }) => {
+        try {
+            return await getVideoProcessor().getMediaInfo(filePath);
+        } catch (err) {
+            console.error('[main] Failed to get media info:', err);
+            throw new Error(`Media info retrieval failed: ${err.message}`);
+        }
+    });
+
+    ipcMain.handle('video:trim', async (event, options) => {
+        const proc = getVideoProcessor();
+        const jobId = options.jobId || require('crypto').randomUUID();
+        const controller = new AbortController();
+        proc.activeJobs.set(jobId, {
+            controller,
+            operation: 'Trim',
+            inputFile: options.inputPath,
+            startedAt: Date.now()
+        });
+
+        try {
+            await proc.trimVideo({
+                ...options,
+                signal: controller.signal,
+                onProgress: (percent) => {
+                    event.sender.send('video:progress', { jobId, percent, operation: 'Trim' });
+                }
+            });
+            return { success: true, jobId };
+        } catch (err) {
+            console.error('[main] Video trim failed:', err);
+            return { success: false, error: err.message, jobId };
+        } finally {
+            proc.activeJobs.delete(jobId);
+        }
+    });
+
+    ipcMain.handle('video:merge', async (event, options) => {
+        const proc = getVideoProcessor();
+        const jobId = options.jobId || require('crypto').randomUUID();
+        const controller = new AbortController();
+        proc.activeJobs.set(jobId, {
+            controller,
+            operation: 'Merge',
+            inputFile: options.inputPaths[0],
+            startedAt: Date.now()
+        });
+
+        try {
+            await proc.mergeVideos({
+                ...options,
+                signal: controller.signal,
+                onProgress: (percent) => {
+                    event.sender.send('video:progress', { jobId, percent, operation: 'Merge' });
+                }
+            });
+            return { success: true, jobId };
+        } catch (err) {
+            console.error('[main] Video merge failed:', err);
+            return { success: false, error: err.message, jobId };
+        } finally {
+            proc.activeJobs.delete(jobId);
+        }
+    });
+
+    ipcMain.handle('video:extractAudio', async (event, options) => {
+        const proc = getVideoProcessor();
+        const jobId = options.jobId || require('crypto').randomUUID();
+        const controller = new AbortController();
+        proc.activeJobs.set(jobId, {
+            controller,
+            operation: 'Audio Extract',
+            inputFile: options.inputPath,
+            startedAt: Date.now()
+        });
+
+        try {
+            await proc.extractAudio({
+                ...options,
+                signal: controller.signal,
+                onProgress: (percent) => {
+                    event.sender.send('video:progress', { jobId, percent, operation: 'Audio Extract' });
+                }
+            });
+            return { success: true, jobId };
+        } catch (err) {
+            console.error('[main] Video audio extraction failed:', err);
+            return { success: false, error: err.message, jobId };
+        } finally {
+            proc.activeJobs.delete(jobId);
+        }
+    });
+
+    ipcMain.handle('video:compress', async (event, options) => {
+        const proc = getVideoProcessor();
+        const jobId = options.jobId || require('crypto').randomUUID();
+        const controller = new AbortController();
+        proc.activeJobs.set(jobId, {
+            controller,
+            operation: 'Compress',
+            inputFile: options.inputPath,
+            startedAt: Date.now()
+        });
+
+        try {
+            await proc.compressVideo({
+                ...options,
+                signal: controller.signal,
+                onProgress: ({ percent, estimatedReduction }) => {
+                    event.sender.send('video:progress', { jobId, percent, estimatedReduction, operation: 'Compress' });
+                }
+            });
+            return { success: true, jobId };
+        } catch (err) {
+            console.error('[main] Video compression failed:', err);
+            return { success: false, error: err.message, jobId };
+        } finally {
+            proc.activeJobs.delete(jobId);
+        }
+    });
+
+    ipcMain.handle('video:hardcodeSubtitles', async (event, options) => {
+        const proc = getVideoProcessor();
+        const jobId = options.jobId || require('crypto').randomUUID();
+        const controller = new AbortController();
+        proc.activeJobs.set(jobId, {
+            controller,
+            operation: 'Subtitles',
+            inputFile: options.inputPath,
+            startedAt: Date.now()
+        });
+
+        try {
+            const res = await proc.hardcodeSubtitles({
+                ...options,
+                signal: controller.signal,
+                onProgress: (percent) => {
+                    event.sender.send('video:progress', { jobId, percent, operation: 'Subtitles' });
+                }
+            });
+            return { success: true, ...res, jobId };
+        } catch (err) {
+            console.error('[main] Subtitle burn failed:', err);
+            return { success: false, error: err.message, jobId };
+        } finally {
+            proc.activeJobs.delete(jobId);
+        }
+    });
+
+    ipcMain.handle('video:cancel', async (event, { jobId }) => {
+        try {
+            return getVideoProcessor().cancelJob(jobId);
+        } catch (err) {
+            console.error('[main] Failed to cancel video job:', err);
+            return false;
+        }
+    });
+
+    ipcMain.handle('video:getActiveJobs', async () => {
+        try {
+            return getVideoProcessor().getActiveJobs();
+        } catch (err) {
+            console.error('[main] Failed to get active video jobs:', err);
+            return [];
         }
     });
 
