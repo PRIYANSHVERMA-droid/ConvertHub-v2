@@ -2,9 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: converthub-media:; media-src 'self' converthub-media:; connect-src 'self';">
     <title>ConvertHub v2</title>
     <link rel="stylesheet" href="styles.css">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="vendor/fontawesome/css/all.min.css" rel="stylesheet">
 </head>
 <body data-theme="dark">
     <!-- Startup Splash -->
@@ -1516,15 +1517,6 @@
         </div>
     </div>
 
-    <script type="module">
-        import * as pdfjsLib from '../node_modules/pdfjs-dist/build/pdf.mjs';
-
-        pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-            '../node_modules/pdfjs-dist/build/pdf.worker.mjs',
-            import.meta.url
-        ).toString();
-        window.pdfjsLib = pdfjsLib;
-    </script>
-    <script src="app.js"></script>
+    <script type="module" src="app.js"></script>
 </body>
 </html>

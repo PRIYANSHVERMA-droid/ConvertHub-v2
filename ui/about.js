@@ -21,10 +21,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (version) {
                 versionEl.textContent = `v${version}`;
             } else {
-                versionEl.textContent = 'v2.1';
+                // FALLBACK VERSION: Must be updated manually when bumping version in package.json
+                versionEl.textContent = 'v2.3.0';
             }
         } catch (_) {
-            versionEl.textContent = 'v2.1';
+            // FALLBACK VERSION: Must be updated manually when bumping version in package.json
+            versionEl.textContent = 'v2.3.0';
         }
     }
 

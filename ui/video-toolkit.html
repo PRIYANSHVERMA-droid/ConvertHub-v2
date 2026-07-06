@@ -36,6 +36,11 @@
                     <!-- Media Info Card -->
                     <div class="media-info-card" id="video-trim-info-card"></div>
                     
+                    <!-- Video Preview -->
+                    <div class="video-preview-wrapper" style="margin-top: 15px; margin-bottom: 15px;">
+                        <video id="video-trim-preview" controls></video>
+                    </div>
+                    
                     <!-- Trim controls -->
                     <div class="form-group" style="margin-top: 25px;">
                         <label>Trim Range</label>
@@ -44,10 +49,10 @@
                             <input type="range" id="trim-start" min="0" max="100" value="0" step="0.1" class="trim-slider-handle">
                             <input type="range" id="trim-end" min="0" max="100" value="100" step="0.1" class="trim-slider-handle">
                         </div>
-                        <div class="trim-time-labels" style="display: flex; justify-content: space-between; margin-top: 10px;">
-                            <span id="trim-start-label">00:00:00</span>
-                            <span id="trim-duration-label" style="font-weight: 600; color: var(--accent-color);">Selected: 0.0s</span>
-                            <span id="trim-end-label">00:00:00</span>
+                        <div class="trim-time-labels">
+                            <input type="text" id="trim-start-label" class="no-drag" value="00:00:00">
+                            <span id="trim-duration-label">Selected: 0.0s</span>
+                            <input type="text" id="trim-end-label" class="no-drag" value="00:00:00">
                         </div>
                     </div>
                 </div>
@@ -70,6 +75,11 @@
 
                 <!-- Merge Files List -->
                 <div id="video-merge-list-container" class="video-settings-container hidden" style="margin-top: 20px;">
+                    <!-- Video Preview -->
+                    <div class="video-preview-wrapper" style="margin-bottom: 20px;">
+                        <video id="video-merge-preview" controls></video>
+                    </div>
+                    
                     <div class="grid-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                         <h4 id="video-merge-count">0 Videos Selected</h4>
                         <button class="clear-btn no-drag" id="video-merge-clear-btn"><i class="fa-solid fa-trash-can"></i> Clear All</button>
@@ -102,6 +112,11 @@
 
                 <div id="video-audio-settings" class="video-settings-container hidden" style="margin-top: 20px;">
                     <div class="media-info-card" id="video-audio-info-card"></div>
+                    
+                    <!-- Video Preview -->
+                    <div class="video-preview-wrapper" style="margin-top: 15px; margin-bottom: 15px;">
+                        <video id="video-audio-preview" controls></video>
+                    </div>
                 </div>
             </div>
 
@@ -122,6 +137,11 @@
 
                 <div id="video-compress-settings" class="video-settings-container hidden" style="margin-top: 20px;">
                     <div class="media-info-card" id="video-compress-info-card"></div>
+                    
+                    <!-- Video Preview -->
+                    <div class="video-preview-wrapper" style="margin-top: 15px; margin-bottom: 15px;">
+                        <video id="video-compress-preview" controls></video>
+                    </div>
                 </div>
             </div>
 
@@ -142,6 +162,11 @@
 
                 <div id="video-subtitles-settings" class="video-settings-container hidden" style="margin-top: 20px;">
                     <div class="media-info-card" id="video-subtitles-info-card"></div>
+                    
+                    <!-- Video Preview -->
+                    <div class="video-preview-wrapper" style="margin-top: 15px; margin-bottom: 15px;">
+                        <video id="video-subtitles-preview" controls></video>
+                    </div>
                 </div>
             </div>
 

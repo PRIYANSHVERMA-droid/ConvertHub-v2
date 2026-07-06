@@ -1,0 +1,316 @@
+/* ==========================================
+   Workspace Layouts & Transitions
+   ========================================== */
+.workspace-panel {
+    width: 100%;
+    height: calc(100% - 60px); /* accounting for header */
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.workspace-panel.hidden {
+    display: none !important;
+    opacity: 0;
+    transform: translateY(15px);
+}
+
+/* ==========================================
+   ConvertHub Launchpad Workspace
+   ========================================== */
+#launchpad-workspace {
+    align-items: center;
+    padding: 40px;
+    overflow-y: auto;
+}
+
+.launchpad-container {
+    max-width: 960px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: var(--launchpad-gap);
+    margin: auto 0;
+}
+
+.launchpad-header {
+    text-align: center;
+}
+
+.launchpad-header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+[data-theme="light"] .launchpad-header h1 {
+    background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.launchpad-header p {
+    color: var(--text-muted);
+    font-size: 16px;
+    font-weight: 400;
+}
+
+.launchpad-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--launchpad-card-gap);
+}
+
+.launchpad-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: clamp(16px, 2.5vw, 24px);
+    padding: var(--launchpad-card-padding-v) var(--launchpad-card-padding-h);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-theme="light"] .launchpad-card {
+    background: rgba(255, 255, 255, 0.45);
+    border-color: rgba(0, 0, 0, 0.06);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
+}
+
+.card-glow {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 250px; height: 250px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    z-index: 1;
+    filter: blur(60px);
+    pointer-events: none;
+}
+
+.card-converter .card-glow {
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.25) 0%, transparent 70%);
+}
+
+.card-pdf .card-glow {
+    background: radial-gradient(circle, rgba(244, 63, 94, 0.25) 0%, transparent 70%);
+}
+
+.launchpad-card:hover .card-glow {
+    opacity: 1;
+}
+
+.launchpad-card:hover {
+    transform: translateY(-8px);
+    border-color: rgba(255, 255, 255, 0.18);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="light"] .launchpad-card:hover {
+    background: rgba(255, 255, 255, 0.75);
+    border-color: rgba(0, 0, 0, 0.12);
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+}
+
+.card-icon {
+    width: var(--launchpad-icon-size);
+    height: var(--launchpad-icon-size);
+    border-radius: clamp(12px, 2vw, 20px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: calc(var(--launchpad-icon-size) * 0.45);
+    margin-bottom: var(--launchpad-icon-margin);
+    z-index: 2;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.launchpad-card:hover .card-icon {
+    transform: scale(1.1) rotate(3deg);
+}
+
+.card-converter .card-icon {
+    color: #a855f7;
+    background: rgba(168, 85, 247, 0.15);
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.2);
+}
+
+.card-pdf .card-icon {
+    color: #f43f5e;
+    background: rgba(244, 63, 94, 0.15);
+    box-shadow: 0 0 20px rgba(244, 63, 94, 0.2);
+}
+
+.launchpad-card h3 {
+    font-size: var(--launchpad-title-size);
+    font-weight: 600;
+    margin-bottom: var(--launchpad-title-margin);
+    color: var(--text-main);
+    z-index: 2;
+}
+
+.launchpad-card p {
+    font-size: var(--launchpad-desc-size);
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-bottom: var(--launchpad-desc-margin);
+    z-index: 2;
+    max-width: 320px;
+}
+
+.card-badges {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    z-index: 2;
+    margin-top: auto;
+}
+
+.card-badges .badge {
+    padding: var(--launchpad-badge-padding-v) var(--launchpad-badge-padding-h);
+    border-radius: clamp(6px, 1vw, 8px);
+    font-size: var(--launchpad-badge-font-size);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: var(--text-muted);
+}
+
+.card-badges .badge i {
+    font-size: 10px;
+}
+
+[data-theme="light"] .card-badges .badge {
+    background: rgba(0, 0, 0, 0.03);
+    border-color: rgba(0, 0, 0, 0.05);
+}
+
+.card-badges .badge i {
+    font-size: 10px;
+}
+
+.card-badges .badge.audio { color: var(--accent-audio); background: rgba(168, 85, 247, 0.1); border-color: rgba(168, 85, 247, 0.15); }
+.card-badges .badge.video { color: var(--accent-video); background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.15); }
+.card-badges .badge.image { color: var(--accent-image); background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.15); }
+.card-badges .badge.document { color: var(--accent-document); background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.15); }
+.card-badges .badge.archive { color: var(--accent-archive); background: rgba(236, 72, 153, 0.1); border-color: rgba(236, 72, 153, 0.15); }
+
+.card-badges .badge.doc-pdf { color: #f43f5e; background: rgba(244, 63, 94, 0.1); border-color: rgba(244, 63, 94, 0.15); }
+.card-badges .badge.doc-extract { color: #10b981; background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.15); }
+.card-badges .badge.doc-merge { color: #8b5cf6; background: rgba(139, 92, 246, 0.1); border-color: rgba(139, 92, 246, 0.15); }
+
+.launchpad-footer {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+/* Bypass Checkbox custom styling */
+.launchpad-footer .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    padding: 10px 20px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.2s ease;
+}
+
+[data-theme="light"] .launchpad-footer .toggle-row {
+    background: rgba(255, 255, 255, 0.35);
+    border-color: rgba(0, 0, 0, 0.05);
+}
+
+.launchpad-footer .toggle-row:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="light"] .launchpad-footer .toggle-row:hover {
+    background: rgba(255, 255, 255, 0.55);
+}
+
+.checkbox-container {
+    position: relative;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.checkbox-container input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0; width: 0;
+}
+
+.checkbox-custom {
+    position: absolute;
+    top: 0; left: 0;
+    height: 20px; width: 20px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1.5px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-theme="light"] .checkbox-custom {
+    background-color: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.15);
+}
+
+.checkbox-container input:checked ~ .checkbox-custom {
+    background: var(--primary-btn);
+    border-color: transparent;
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.35);
+}
+
+.checkbox-custom:after {
+    content: "";
+    position: absolute;
+    display: none;
+    left: 6px; top: 2px;
+    width: 5px; height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.checkbox-container input:checked ~ .checkbox-custom:after {
+    display: block;
+}
+
+.toggle-label {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 500;
+    user-select: none;
+}
+

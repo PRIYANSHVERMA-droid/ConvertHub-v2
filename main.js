@@ -5,6 +5,43 @@ const os = require('os');
 const { pathToFileURL } = require('url');
 const { initUpdater } = require('./core/updater');
 
+// Register custom protocol as privileged to allow video streaming and fetching
+protocol.registerSchemesAsPrivileged([
+    {
+        scheme: 'converthub-media',
+        privileges: {
+            standard: true,
+            secure: true,
+            stream: true,
+            bypassCSP: true,
+            supportFetchAPI: true,
+            corsEnabled: true
+        }
+    }
+]);
+
+function getMimeType(filePath) {
+    const ext = path.extname(filePath).toLowerCase();
+    const map = {
+        '.mp4': 'video/mp4',
+        '.webm': 'video/webm',
+        '.mkv': 'video/x-matroska',
+        '.mov': 'video/quicktime',
+        '.mp3': 'audio/mpeg',
+        '.wav': 'audio/wav',
+        '.ogg': 'audio/ogg',
+        '.aac': 'audio/aac',
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.webp': 'image/webp',
+        '.bmp': 'image/bmp',
+        '.gif': 'image/gif',
+        '.pdf': 'application/pdf'
+    };
+    return map[ext] || 'application/octet-stream';
+}
+
 // IPC sender origin validation
 function verifySender(event) {
     if (!event || !event.senderFrame) {
@@ -243,8 +280,8 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-    // Register custom protocol handler
-    protocol.handle('converthub-media', (request) => {
+    // Register custom protocol handler with support for Range requests and fs.createReadStream
+    protocol.handle('converthub-media', async (request) => {
         try {
             const url = new URL(request.url);
             const filePath = url.searchParams.get('path');
@@ -256,9 +293,62 @@ app.whenReady().then(() => {
             if (!allowedExts.includes(ext)) {
                 return new Response('Forbidden: Invalid file type or extension', { status: 403 });
             }
-            
-            return net.fetch(pathToFileURL(resolvedPath).toString());
+
+            // Verify file exists and is readable
+            try {
+                await fs.promises.access(resolvedPath, fs.constants.R_OK);
+            } catch {
+                return new Response('File not found', { status: 404 });
+            }
+
+            const stat = await fs.promises.stat(resolvedPath);
+            const size = stat.size;
+            const mimeType = getMimeType(resolvedPath);
+            const range = request.headers.get('range');
+
+            if (range) {
+                // Parse Range header (e.g. "bytes=0-1000" or "bytes=500-")
+                const parts = range.replace(/bytes=/, "").split("-");
+                const start = parseInt(parts[0], 10);
+                const end = parts[1] ? parseInt(parts[1], 10) : size - 1;
+
+                if (isNaN(start) || start < 0 || start >= size || end < start || end >= size) {
+                    return new Response('Requested range not satisfiable', {
+                        status: 416,
+                        headers: {
+                            'Content-Range': `bytes */${size}`,
+                            'Access-Control-Allow-Origin': '*'
+                        }
+                    });
+                }
+
+                const chunkSize = (end - start) + 1;
+                const fileStream = fs.createReadStream(resolvedPath, { start, end });
+                
+                return new Response(fileStream, {
+                    status: 206,
+                    headers: {
+                        'Content-Range': `bytes ${start}-${end}/${size}`,
+                        'Accept-Ranges': 'bytes',
+                        'Content-Length': chunkSize.toString(),
+                        'Content-Type': mimeType,
+                        'Access-Control-Allow-Origin': '*'
+                    }
+                });
+            } else {
+                const fileStream = fs.createReadStream(resolvedPath);
+                return new Response(fileStream, {
+                    status: 200,
+                    headers: {
+                        'Content-Length': size.toString(),
+                        'Content-Type': mimeType,
+                        'Accept-Ranges': 'bytes',
+                        'Access-Control-Allow-Origin': '*'
+                    }
+                });
+            }
         } catch (e) {
+            console.error('[main] converthub-media protocol error:', e);
             return new Response('Error: ' + e.message, { status: 500 });
         }
     });
@@ -417,6 +507,7 @@ app.whenReady().then(() => {
 
         try {
             await proc.trimVideo({
+                jobId,
                 ...options,
                 signal: controller.signal,
                 onProgress: (percent) => {
@@ -445,6 +536,7 @@ app.whenReady().then(() => {
 
         try {
             await proc.mergeVideos({
+                jobId,
                 ...options,
                 signal: controller.signal,
                 onProgress: (percent) => {
@@ -473,6 +565,7 @@ app.whenReady().then(() => {
 
         try {
             await proc.extractAudio({
+                jobId,
                 ...options,
                 signal: controller.signal,
                 onProgress: (percent) => {
@@ -501,6 +594,7 @@ app.whenReady().then(() => {
 
         try {
             await proc.compressVideo({
+                jobId,
                 ...options,
                 signal: controller.signal,
                 onProgress: ({ percent, estimatedReduction }) => {
@@ -529,6 +623,7 @@ app.whenReady().then(() => {
 
         try {
             const res = await proc.hardcodeSubtitles({
+                jobId,
                 ...options,
                 signal: controller.signal,
                 onProgress: (percent) => {

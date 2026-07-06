@@ -32,6 +32,26 @@
         return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     }
 
+    function parseTimeToSeconds(str) {
+        if (!str) return 0;
+        str = str.trim();
+        if (str.includes(':')) {
+            const parts = str.split(':');
+            if (parts.length === 3) {
+                const h = parseFloat(parts[0]) || 0;
+                const m = parseFloat(parts[1]) || 0;
+                const s = parseFloat(parts[2]) || 0;
+                return h * 3600 + m * 60 + s;
+            } else if (parts.length === 2) {
+                const m = parseFloat(parts[0]) || 0;
+                const s = parseFloat(parts[1]) || 0;
+                return m * 60 + s;
+            }
+        }
+        const secs = parseFloat(str);
+        return isNaN(secs) ? 0 : secs;
+    }
+
     function generateUUID() {
         if (typeof window.crypto?.randomUUID === 'function') {
             return window.crypto.randomUUID();
@@ -74,7 +94,6 @@
         setupDropzones();
         setupFormListeners();
         setupTrimSliderSync();
-        setupSidebarListeners();
         setupProgressPolling(); // Sync active jobs on startup
     }
 
@@ -257,6 +276,33 @@
                 renderMediaInfoCard(infoCard, info);
             }
 
+            // Initialize video preview player
+            const videoPreview = document.getElementById(`video-${activeTab}-preview`);
+            if (videoPreview) {
+                videoPreview.src = `converthub-media://local-file/?path=${encodeURIComponent(filePath)}`;
+                videoPreview.load();
+                
+                // For trim tab, add playback bounds enforcement
+                if (activeTab === 'trim') {
+                    videoPreview.ontimeupdate = () => {
+                        const trimStart = document.getElementById('trim-start');
+                        const trimEnd = document.getElementById('trim-end');
+                        if (!trimStart || !trimEnd) return;
+                        
+                        const startVal = parseFloat(trimStart.value);
+                        const endVal = parseFloat(trimEnd.value);
+                        
+                        if (videoPreview.currentTime > endVal) {
+                            videoPreview.pause();
+                            videoPreview.currentTime = startVal;
+                        }
+                        if (videoPreview.currentTime < startVal) {
+                            videoPreview.currentTime = startVal;
+                        }
+                    };
+                }
+            }
+
             // Hide upload zone and show settings
             document.getElementById(`video-${activeTab}-dropzone`).classList.add('hidden');
             document.getElementById(`video-${activeTab}-settings`).classList.remove('hidden');
@@ -316,9 +362,24 @@
         const activeTab = state.activeTab;
         if (activeTab === 'merge') {
             state.mergeFiles = [];
+            
+            // Clean up merge video preview
+            const mergePreview = document.getElementById('video-merge-preview');
+            if (mergePreview) {
+                mergePreview.removeAttribute('src');
+                mergePreview.load();
+            }
+
             document.getElementById('video-merge-dropzone').classList.remove('hidden');
             document.getElementById('video-merge-list-container').classList.add('hidden');
         } else {
+            // Clean up video preview source
+            const videoPreview = document.getElementById(`video-${activeTab}-preview`);
+            if (videoPreview) {
+                videoPreview.removeAttribute('src');
+                videoPreview.load();
+            }
+
             state.primaryFile = null;
             state.mediaInfo = null;
             if (activeTab === 'subtitles') {
@@ -446,6 +507,8 @@
     function setupTrimSliderSync() {
         const trimStart = document.getElementById('trim-start');
         const trimEnd = document.getElementById('trim-end');
+        const startLabel = document.getElementById('trim-start-label');
+        const endLabel = document.getElementById('trim-end-label');
 
         if (!trimStart || !trimEnd) return;
 
@@ -455,8 +518,15 @@
 
             if (startVal >= endVal - MIN_TRIM_GAP_SECS) {
                 trimStart.value = endVal - MIN_TRIM_GAP_SECS;
+                startVal = endVal - MIN_TRIM_GAP_SECS;
             }
             updateTrimLabels();
+
+            // Seek video preview to the start handle position
+            const video = document.getElementById('video-trim-preview');
+            if (video) {
+                video.currentTime = startVal;
+            }
         });
 
         trimEnd.addEventListener('input', () => {
@@ -465,9 +535,57 @@
 
             if (endVal <= startVal + MIN_TRIM_GAP_SECS) {
                 trimEnd.value = startVal + MIN_TRIM_GAP_SECS;
+                endVal = startVal + MIN_TRIM_GAP_SECS;
             }
             updateTrimLabels();
+
+            // Seek video preview to the end handle position
+            const video = document.getElementById('video-trim-preview');
+            if (video) {
+                video.currentTime = endVal;
+            }
         });
+
+        const handleManualTimeInput = (inputElement, isStart) => {
+            const rawVal = inputElement.value;
+            const parsedSecs = parseTimeToSeconds(rawVal);
+            const video = document.getElementById('video-trim-preview');
+            const maxVal = parseFloat(trimStart.max) || 100;
+
+            let startVal = parseFloat(trimStart.value);
+            let endVal = parseFloat(trimEnd.value);
+
+            if (isStart) {
+                let newStart = Math.min(Math.max(0, parsedSecs), endVal - MIN_TRIM_GAP_SECS);
+                trimStart.value = newStart;
+                startVal = newStart;
+                if (video) video.currentTime = startVal;
+            } else {
+                let newEnd = Math.min(Math.max(startVal + MIN_TRIM_GAP_SECS, parsedSecs), maxVal);
+                trimEnd.value = newEnd;
+                endVal = newEnd;
+                if (video) video.currentTime = endVal;
+            }
+            updateTrimLabels();
+        };
+
+        if (startLabel) {
+            startLabel.addEventListener('change', () => handleManualTimeInput(startLabel, true));
+            startLabel.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    startLabel.blur();
+                }
+            });
+        }
+
+        if (endLabel) {
+            endLabel.addEventListener('change', () => handleManualTimeInput(endLabel, false));
+            endLabel.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    endLabel.blur();
+                }
+            });
+        }
     }
 
     function updateTrimLabels() {
@@ -489,9 +607,13 @@
         track.style.setProperty('--start-percent', `${startPercent}%`);
         track.style.setProperty('--end-percent', `${endPercent}%`);
 
-        // Labels
-        startLabel.textContent = formatTime(startVal);
-        endLabel.textContent = formatTime(endVal);
+        // Labels (if not focused, update value)
+        if (startLabel && document.activeElement !== startLabel) {
+            startLabel.value = formatTime(startVal);
+        }
+        if (endLabel && document.activeElement !== endLabel) {
+            endLabel.value = formatTime(endVal);
+        }
         
         const duration = endVal - startVal;
         durationLabel.textContent = `Selected: ${duration.toFixed(1)}s`;
@@ -518,7 +640,7 @@
             row.style.cssText = `
                 display: flex; gap: 12px; align-items: center; padding: 10px 14px;
                 background: rgba(255, 255, 255, 0.02); border: 1px solid var(--panel-border);
-                border-radius: 8px; margin-bottom: 8px; cursor: grab; transition: background 0.2s, border-color 0.2s;
+                border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: background 0.2s, border-color 0.2s;
             `;
 
             row.innerHTML = `
@@ -534,6 +656,22 @@
                 <button class="icon-btn-danger no-drag remove-merge-btn" style="padding: 6px 10px; font-size: 11px;" title="Remove"><i class="fa-solid fa-xmark"></i></button>
             `;
 
+            // Click row to preview video clip in-app
+            row.addEventListener('click', (e) => {
+                if (e.target.tagName === 'BUTTON' || e.target.closest('button') || e.target.classList.contains('drag-handle') || e.target.closest('.drag-handle')) {
+                    return;
+                }
+
+                document.querySelectorAll('.merge-file-row').forEach(r => r.classList.remove('active-clip'));
+                row.classList.add('active-clip');
+
+                const mergePreview = document.getElementById('video-merge-preview');
+                if (mergePreview) {
+                    mergePreview.src = `converthub-media://local-file/?path=${encodeURIComponent(file.filePath)}`;
+                    mergePreview.load();
+                }
+            });
+
             // Drag events
             row.addEventListener('dragstart', (e) => {
                 row.style.opacity = '0.5';
@@ -542,7 +680,11 @@
 
             row.addEventListener('dragend', () => {
                 row.style.opacity = '1';
-                document.querySelectorAll('.merge-file-row').forEach(r => r.style.borderColor = 'var(--panel-border)');
+                document.querySelectorAll('.merge-file-row').forEach(r => {
+                    if (!r.classList.contains('active-clip')) {
+                        r.style.borderColor = 'var(--panel-border)';
+                    }
+                });
             });
 
             row.addEventListener('dragover', (e) => {
@@ -551,7 +693,9 @@
             });
 
             row.addEventListener('dragleave', () => {
-                row.style.borderColor = 'var(--panel-border)';
+                if (!row.classList.contains('active-clip')) {
+                    row.style.borderColor = 'var(--panel-border)';
+                }
             });
 
             row.addEventListener('drop', (e) => {
@@ -570,11 +714,40 @@
             row.querySelector('.remove-merge-btn').addEventListener('click', (e) => {
                 e.stopPropagation();
                 state.mergeFiles.splice(index, 1);
+                
+                // Clear preview if removing currently playing clip
+                const mergePreview = document.getElementById('video-merge-preview');
+                if (mergePreview && mergePreview.src && decodeURIComponent(mergePreview.src).includes(file.filePath)) {
+                    mergePreview.removeAttribute('src');
+                    mergePreview.load();
+                }
+                
                 renderMergeFileList();
             });
 
             list.appendChild(row);
         });
+
+        // Default merge preview to the first file if empty or not loaded yet
+        const mergePreview = document.getElementById('video-merge-preview');
+        if (mergePreview && state.mergeFiles.length > 0) {
+            const firstFile = state.mergeFiles[0].filePath;
+            const currentSrc = mergePreview.getAttribute('src') || '';
+            const targetSrc = `converthub-media://local-file/?path=${encodeURIComponent(firstFile)}`;
+            
+            if (!currentSrc || decodeURIComponent(currentSrc).indexOf(firstFile) === -1) {
+                mergePreview.src = targetSrc;
+                mergePreview.load();
+            }
+
+            // Set active selection to first item
+            setTimeout(() => {
+                const rows = document.querySelectorAll('.merge-file-row');
+                if (rows.length > 0 && !document.querySelector('.merge-file-row.active-clip')) {
+                    rows[0].classList.add('active-clip');
+                }
+            }, 0);
+        }
     }
 
     // Clear all merge files
@@ -724,6 +897,17 @@
         // Store local reference for listening
         registerProgressUpdates();
 
+        // Check if job is currently queued (since we have a concurrency limit of 2)
+        try {
+            const active = await videoAPI.getActiveJobs();
+            const ourJob = active.find(j => j.jobId === jobId);
+            if (ourJob && ourJob.status === 'queued') {
+                document.getElementById('video-job-status-msg').textContent = 'Queued — waiting for another job to finish...';
+            }
+        } catch (e) {
+            console.error('[video-toolkit] Error checking queued state:', e);
+        }
+
         try {
             // Trigger Operation
             const response = await apiCall(options);
@@ -811,8 +995,29 @@
                 const outName = document.getElementById(`video-${tab}-output-name`).value;
                 const outPath = state.outputDir + '\\' + outName;
                 
+                // Clear the active file and reset UI to dropzone state
+                resetActivePanel();
+                
+                // Show the success banner
                 showResultSuccess(`Successfully completed operation. Output saved to: ${outPath}`, outPath);
                 showNotificationToast('Video operation completed successfully!', 'success');
+                
+                // Auto-fade / hide success banner after 1.5 seconds
+                setTimeout(() => {
+                    const banner = document.getElementById('video-result-banner');
+                    if (banner) {
+                        banner.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+                        banner.style.opacity = '0';
+                        banner.style.transform = 'translateY(10px)';
+                        setTimeout(() => {
+                            clearResultBanner();
+                            // Reset inline styles for subsequent operations
+                            banner.style.opacity = '';
+                            banner.style.transform = '';
+                            banner.style.transition = '';
+                        }, 400);
+                    }
+                }, 1500);
             } else {
                 showResultError(errorMsg || 'Operation failed or cancelled.');
                 showNotificationToast('Video operation failed.', 'error');
@@ -855,6 +1060,9 @@
                 state.activeJobId = job.jobId;
                 showJobProgressUI(job.operation.toLowerCase().replace(' ', ''));
                 registerProgressUpdates();
+                if (job.status === 'queued') {
+                    document.getElementById('video-job-status-msg').textContent = 'Queued — waiting for another job to finish...';
+                }
             }
         } catch (e) {
             console.error('Failed to sync active jobs:', e);

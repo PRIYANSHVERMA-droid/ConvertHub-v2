@@ -11,8 +11,72 @@ const PROGRESS_THROTTLE_MS = 250;
 const SUPPORTED_INPUT_FORMATS = ['mp4', 'mkv', 'mov', 'avi', 'webm', 'flv', 'wmv', 'm4v', 'ts', 'mts'];
 const SUPPORTED_SUBTITLE_FORMATS = ['srt', 'ass', 'vtt'];
 
-// Active jobs tracker map: jobId -> { controller, operation, inputFile, startedAt }
+// Active jobs tracker map: jobId -> { controller, operation, inputFile, startedAt, status }
 const activeJobs = new Map();
+
+// Concurrency queue management
+const originalDelete = activeJobs.delete.bind(activeJobs);
+activeJobs.delete = function (key) {
+    const result = originalDelete(key);
+    checkQueue();
+    return result;
+};
+
+function checkQueue() {
+    let runningCount = 0;
+    const queuedJobs = [];
+
+    for (const [jobId, job] of activeJobs.entries()) {
+        if (job.status === 'running') {
+            runningCount++;
+        } else if (job.status === 'queued') {
+            queuedJobs.push(job);
+        }
+    }
+
+    // Sort queued jobs by startedAt to make it FIFO
+    queuedJobs.sort((a, b) => a.startedAt - b.startedAt);
+
+    // Start queued jobs if we have slots
+    while (runningCount < MAX_CONCURRENT_VIDEO_JOBS && queuedJobs.length > 0) {
+        const nextJob = queuedJobs.shift();
+        if (nextJob && typeof nextJob.run === 'function') {
+            runningCount++;
+            nextJob.run();
+        }
+    }
+}
+
+function waitForTurn(jobId, signal) {
+    const job = activeJobs.get(jobId);
+    if (!job) return Promise.resolve();
+
+    return new Promise((resolve, reject) => {
+        if (signal && signal.aborted) {
+            reject(new Error('Operation cancelled by user.'));
+            return;
+        }
+
+        const onAbort = () => {
+            reject(new Error('Operation cancelled by user.'));
+        };
+
+        if (signal) {
+            signal.addEventListener('abort', onAbort);
+        }
+
+        job.status = 'queued';
+        job.run = () => {
+            if (signal) {
+                signal.removeEventListener('abort', onAbort);
+            }
+            job.status = 'running';
+            job.startedAt = Date.now();
+            resolve();
+        };
+        checkQueue();
+    });
+}
 
 /**
  * Resolves the path to the bundled FFmpeg executable.
@@ -36,19 +100,10 @@ function sanitizePath(filePath) {
         throw new Error('File path is required.');
     }
     const resolved = path.resolve(filePath);
-    const homeDir = path.resolve(os.homedir());
-    const tempDir = path.resolve(os.tmpdir());
 
-    const lowerResolved = resolved.toLowerCase();
-    const lowerHome = homeDir.toLowerCase();
-    const lowerTemp = tempDir.toLowerCase();
-
-    // Verify file is under home directory or temp directory
-    const isUnderHome = lowerResolved.startsWith(lowerHome);
-    const isUnderTemp = lowerResolved.startsWith(lowerTemp);
-
-    if (!isUnderHome && !isUnderTemp) {
-        throw new Error(`Access Denied: Path escapes allowed directories: ${resolved}`);
+    // Verify it is a valid absolute path and does not contain null bytes
+    if (!path.isAbsolute(resolved) || resolved.includes('\0')) {
+        throw new Error(`Access Denied: Invalid or non-absolute path: ${resolved}`);
     }
     return resolved;
 }
@@ -220,7 +275,9 @@ function spawnFfmpeg(args, onProgress, signal, initialDurationSecs = null) {
  * @param {AbortSignal} [params.signal] - Optional abort signal
  * @returns {Promise<void>}
  */
-async function trimVideo({ inputPath, outputPath, startTime, endTime, reencode = false, onProgress, signal }) {
+async function trimVideo({ jobId, inputPath, outputPath, startTime, endTime, reencode = false, onProgress, signal }) {
+    await waitForTurn(jobId, signal);
+    if (onProgress) onProgress(0);
     const safeInput = sanitizePath(inputPath);
     const safeOutput = sanitizePath(outputPath);
 
@@ -257,7 +314,9 @@ async function trimVideo({ inputPath, outputPath, startTime, endTime, reencode =
  * @param {AbortSignal} [params.signal] - Optional abort signal
  * @returns {Promise<void>}
  */
-async function mergeVideos({ inputPaths, outputPath, totalDuration, onProgress, signal }) {
+async function mergeVideos({ jobId, inputPaths, outputPath, totalDuration, onProgress, signal }) {
+    await waitForTurn(jobId, signal);
+    if (onProgress) onProgress(0);
     if (!inputPaths || !Array.isArray(inputPaths) || inputPaths.length < 2) {
         throw new Error('Minimum of 2 input files required to merge.');
     }
@@ -310,7 +369,9 @@ async function mergeVideos({ inputPaths, outputPath, totalDuration, onProgress, 
  * @param {AbortSignal} [params.signal] - Optional abort signal
  * @returns {Promise<void>}
  */
-async function extractAudio({ inputPath, outputPath, format, bitrate = '192k', duration, onProgress, signal }) {
+async function extractAudio({ jobId, inputPath, outputPath, format, bitrate = '192k', duration, onProgress, signal }) {
+    await waitForTurn(jobId, signal);
+    if (onProgress) onProgress(0);
     const safeInput = sanitizePath(inputPath);
     const safeOutput = sanitizePath(outputPath);
 
@@ -353,7 +414,9 @@ async function extractAudio({ inputPath, outputPath, format, bitrate = '192k', d
  * @param {AbortSignal} [params.signal] - Optional abort signal
  * @returns {Promise<void>}
  */
-async function compressVideo({ inputPath, outputPath, quality, resolution, duration, onProgress, signal }) {
+async function compressVideo({ jobId, inputPath, outputPath, quality, resolution, duration, onProgress, signal }) {
+    await waitForTurn(jobId, signal);
+    if (onProgress) onProgress(0);
     const safeInput = sanitizePath(inputPath);
     const safeOutput = sanitizePath(outputPath);
 
@@ -396,7 +459,9 @@ async function compressVideo({ inputPath, outputPath, quality, resolution, durat
  * @param {AbortSignal} [params.signal] - Optional abort signal
  * @returns {Promise<{ success: boolean, warnNonAscii: boolean }>}
  */
-async function hardcodeSubtitles({ inputPath, subtitlePath, outputPath, duration, onProgress, signal }) {
+async function hardcodeSubtitles({ jobId, inputPath, subtitlePath, outputPath, duration, onProgress, signal }) {
+    await waitForTurn(jobId, signal);
+    if (onProgress) onProgress(0);
     const safeInput = sanitizePath(inputPath);
     const safeSub = sanitizePath(subtitlePath);
     const safeOutput = sanitizePath(outputPath);
@@ -584,7 +649,8 @@ function getActiveJobs() {
             jobId,
             operation: job.operation,
             inputFile: job.inputFile,
-            startedAt: job.startedAt
+            startedAt: job.startedAt,
+            status: job.status || 'running'
         });
     }
     return list;
