@@ -80,19 +80,46 @@ async function getFfmpegPath() {
 
 async function getSevenZipPath() {
     const isPackaged = process.env.NODE_ENV === 'production' || process.defaultApp === false;
-    let localPath = null;
-    if (process.platform === 'win32') {
-        const enginesDir = isPackaged && process.resourcesPath
-            ? path.join(process.resourcesPath, 'engines')
-            : path.resolve(__dirname, '..', 'engines');
-        localPath = path.join(enginesDir, '7zip', '7za.exe');
+    const platform = process.platform;
+    const enginesDir = isPackaged && process.resourcesPath
+        ? path.join(process.resourcesPath, 'engines')
+        : path.resolve(__dirname, '..', 'engines');
+
+    if (platform === 'win32') {
+        const localPath = path.join(enginesDir, '7zip', '7za.exe');
+        if (fs.existsSync(localPath)) {
+            return localPath;
+        }
+        return '7za.exe';
     }
 
-    if (localPath && fs.existsSync(localPath)) {
-        return localPath;
+    // macOS / Linux: check bundled paths first, then system paths
+    const bundledCandidates = [
+        path.join(enginesDir, '7zip', '7zz'),
+        path.join(enginesDir, '7zip', '7z'),
+        path.join(enginesDir, '7zip', '7za')
+    ];
+    for (const candidate of bundledCandidates) {
+        if (fs.existsSync(candidate)) {
+            return candidate;
+        }
     }
 
-    return process.platform === 'win32' ? '7za.exe' : '7z';
+    const systemCandidates = [
+        '/opt/homebrew/bin/7z',
+        '/usr/local/bin/7z',
+        '/usr/bin/7z',
+        '/opt/homebrew/bin/7za',
+        '/usr/local/bin/7za',
+        '/usr/bin/7za'
+    ];
+    for (const candidate of systemCandidates) {
+        if (fs.existsSync(candidate)) {
+            return candidate;
+        }
+    }
+
+    return '7z';
 }
 
 function compressImage(ffmpegPath, inputPath, outputPath, quality) {

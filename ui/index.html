@@ -1359,6 +1359,9 @@
                             </div>
                         </div>
                         <p class="settings-help" id="environment-support">Support status: checking local converter tools.</p>
+                        <button class="outline-btn no-drag hidden" id="engine-setup-guide-btn" style="margin-top: 12px; font-size: 12px; padding: 6px 14px;">
+                            <i class="fa-solid fa-circle-info"></i> Engine Setup Guide
+                        </button>
                     </section>
 
                     <section class="settings-card settings-card-wide updater-card">
@@ -1514,6 +1517,105 @@
                     </div>
                 </div>
             </section>
+        </div>
+    </div>
+
+    <!-- LibreOffice Setup Guide Modal -->
+    <div class="engine-modal-overlay hidden" id="engine-modal-overlay">
+        <div class="engine-modal no-drag">
+            <div class="engine-modal-header">
+                <div>
+                    <h3><i class="fa-solid fa-puzzle-piece" style="color: var(--accent-document);"></i> Engine Setup Required</h3>
+                    <p class="engine-modal-subtitle">One or more conversion engines are missing on your system. Follow the steps below to install them.</p>
+                </div>
+                <button class="icon-btn engine-modal-close-btn" id="engine-modal-close" title="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="engine-modal-body">
+                <div class="engine-modal-missing-list" id="engine-modal-missing-list">
+                    <!-- Dynamically filled -->
+                </div>
+
+                <div class="engine-modal-tabs" id="engine-modal-tabs">
+                    <button class="engine-tab active" data-tab="macos"><i class="fa-brands fa-apple"></i> macOS</button>
+                    <button class="engine-tab" data-tab="linux"><i class="fa-brands fa-linux"></i> Linux</button>
+                    <button class="engine-tab" data-tab="windows"><i class="fa-brands fa-windows"></i> Windows</button>
+                </div>
+
+                <div class="engine-tab-content" id="engine-tab-macos">
+                    <div class="engine-section">
+                        <h4><i class="fa-solid fa-file-lines" style="color: var(--accent-document);"></i> LibreOffice <span class="engine-badge">Document Conversions</span></h4>
+                        <p>LibreOffice is required for converting between document formats (DOCX, PDF, ODT, XLSX, PPTX, etc.).</p>
+                        <div class="engine-install-option">
+                            <span class="engine-option-label"><i class="fa-solid fa-terminal"></i> Install via Homebrew (Recommended)</span>
+                            <div class="engine-code-block">
+                                <code>brew install --cask libreoffice</code>
+                                <button class="engine-copy-btn no-drag" data-copy="brew install --cask libreoffice" title="Copy command"><i class="fa-regular fa-copy"></i></button>
+                            </div>
+                        </div>
+                        <div class="engine-install-option">
+                            <span class="engine-option-label"><i class="fa-solid fa-download"></i> Download installer directly</span>
+                            <button class="engine-download-btn no-drag" data-url="https://www.libreoffice.org/download/download-libreoffice/">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i> libreoffice.org/download
+                            </button>
+                        </div>
+                        <p class="engine-note"><i class="fa-solid fa-circle-check"></i> After installation, restart ConvertHub. LibreOffice will be detected automatically from <code>/Applications/LibreOffice.app</code>.</p>
+                    </div>
+                </div>
+
+                <div class="engine-tab-content hidden" id="engine-tab-linux">
+                    <div class="engine-section">
+                        <h4><i class="fa-solid fa-file-lines" style="color: var(--accent-document);"></i> LibreOffice <span class="engine-badge">Document Conversions</span></h4>
+                        <p>LibreOffice is required for converting between document formats (DOCX, PDF, ODT, XLSX, PPTX, etc.).</p>
+                        <div class="engine-install-option">
+                            <span class="engine-option-label"><i class="fa-solid fa-terminal"></i> Ubuntu / Debian</span>
+                            <div class="engine-code-block">
+                                <code>sudo apt install libreoffice</code>
+                                <button class="engine-copy-btn no-drag" data-copy="sudo apt install libreoffice" title="Copy command"><i class="fa-regular fa-copy"></i></button>
+                            </div>
+                        </div>
+                        <div class="engine-install-option">
+                            <span class="engine-option-label"><i class="fa-solid fa-terminal"></i> Fedora / RHEL</span>
+                            <div class="engine-code-block">
+                                <code>sudo dnf install libreoffice</code>
+                                <button class="engine-copy-btn no-drag" data-copy="sudo dnf install libreoffice" title="Copy command"><i class="fa-regular fa-copy"></i></button>
+                            </div>
+                        </div>
+                        <div class="engine-install-option">
+                            <span class="engine-option-label"><i class="fa-solid fa-terminal"></i> Arch Linux</span>
+                            <div class="engine-code-block">
+                                <code>sudo pacman -S libreoffice-fresh</code>
+                                <button class="engine-copy-btn no-drag" data-copy="sudo pacman -S libreoffice-fresh" title="Copy command"><i class="fa-regular fa-copy"></i></button>
+                            </div>
+                        </div>
+                        <div class="engine-install-option">
+                            <span class="engine-option-label"><i class="fa-solid fa-download"></i> Download installer directly</span>
+                            <button class="engine-download-btn no-drag" data-url="https://www.libreoffice.org/download/download-libreoffice/">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i> libreoffice.org/download
+                            </button>
+                        </div>
+                        <p class="engine-note"><i class="fa-solid fa-circle-check"></i> After installation, restart ConvertHub. LibreOffice will be detected automatically from <code>/usr/bin/soffice</code>.</p>
+                    </div>
+                </div>
+
+                <div class="engine-tab-content hidden" id="engine-tab-windows">
+                    <div class="engine-section">
+                        <h4><i class="fa-solid fa-circle-check" style="color: #22c55e;"></i> Windows</h4>
+                        <p>All conversion engines are pre-bundled with the Windows installer. No additional setup is needed.</p>
+                        <p class="engine-note"><i class="fa-solid fa-circle-info"></i> If you see an engine marked as "missing" on Windows, try reinstalling ConvertHub from the official release page.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="engine-modal-footer">
+                <label class="engine-dismiss-label no-drag">
+                    <input type="checkbox" id="engine-modal-dismiss-checkbox">
+                    <span>Don't show this again on startup</span>
+                </label>
+                <button class="primary-btn glow-btn no-drag" id="engine-modal-done-btn">Got It</button>
+            </div>
         </div>
     </div>
 

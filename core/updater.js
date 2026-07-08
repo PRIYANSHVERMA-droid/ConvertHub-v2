@@ -167,7 +167,34 @@ function initUpdater(mainWindow) {
             console.log('[updater:restart-install] Restart requested in dev mode.');
             return { success: true, simulated: true };
         }
-        autoUpdater.quitAndInstall();
+
+        // 1. Forcefully kill all child processes immediately
+        if (global.activeChildProcesses) {
+            const { spawn } = require('child_process');
+            for (const proc of global.activeChildProcesses) {
+                try {
+                    if (process.platform === 'win32') {
+                        spawn('taskkill', ['/PID', String(proc.pid), '/T', '/F'], { windowsHide: true });
+                    } else {
+                        process.kill(-proc.pid, 'SIGKILL');
+                    }
+                } catch (_) {
+                    try { proc.kill('SIGKILL'); } catch (_) {}
+                }
+            }
+            global.activeChildProcesses.clear();
+        }
+
+        // 2. Destroy all windows (bypasses any prompt-on-close/beforeunload logic)
+        const { BrowserWindow } = require('electron');
+        BrowserWindow.getAllWindows().forEach((w) => {
+            if (!w.isDestroyed()) {
+                w.destroy();
+            }
+        });
+
+        // 3. Initiate installer quit & run
+        autoUpdater.quitAndInstall(false, true);
         return { success: true };
     });
 

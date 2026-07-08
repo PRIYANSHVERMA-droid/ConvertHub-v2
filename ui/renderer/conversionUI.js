@@ -403,6 +403,16 @@ export function initConversion() {
     const environmentPlatform = document.getElementById('environment-platform');
     const environmentEngines = document.getElementById('environment-engines');
     const environmentSupport = document.getElementById('environment-support');
+    const engineSetupGuideBtn = document.getElementById('engine-setup-guide-btn');
+    const engineModalOverlay = document.getElementById('engine-modal-overlay');
+    const engineModalClose = document.getElementById('engine-modal-close');
+    const engineModalDoneBtn = document.getElementById('engine-modal-done-btn');
+    const engineModalDismissCheckbox = document.getElementById('engine-modal-dismiss-checkbox');
+    const engineModalMissingList = document.getElementById('engine-modal-missing-list');
+    const engineTabs = Array.from(document.querySelectorAll('.engine-tab'));
+    const engineTabContents = Array.from(document.querySelectorAll('.engine-tab-content'));
+    const engineCopyButtons = Array.from(document.querySelectorAll('.engine-copy-btn'));
+    const engineDownloadButtons = Array.from(document.querySelectorAll('.engine-download-btn'));
 
     // Updater elements
     const updaterCheckBtn = document.getElementById('updater-check-btn');
@@ -584,6 +594,7 @@ export function initConversion() {
         openFolderOnComplete: false,
         showToasts: true,
         startupWorkspace: 'last',
+        suppressLibreOfficeSetupGuide: false,
         autoCheckUpdates: true,
         autoDownloadUpdates: false
     };
@@ -836,6 +847,81 @@ export function initConversion() {
         environmentSupport.textContent = availableCount === engineEntries.length
             ? 'Support status: ready for the installed feature set'
             : 'Support status: some converters need local engine installs';
+        if (engineSetupGuideBtn) {
+            engineSetupGuideBtn.classList.toggle('hidden', !isLibreOfficeMissing());
+        }
+    }
+
+    function persistSettings() {
+        state.appSettings = { ...appSettings };
+        saveSettings();
+    }
+
+    function isLibreOfficeMissing() {
+        return Boolean(engineStatus?.engines?.libreoffice && !engineStatus.engines.libreoffice.available);
+    }
+
+    function getPreferredEngineGuideTab() {
+        if (engineStatus?.platform === 'darwin') return 'macos';
+        if (engineStatus?.platform === 'linux') return 'linux';
+        if (engineStatus?.platform === 'win32') return 'windows';
+        const bridgePlatform = window.app?.getPlatform?.();
+        if (bridgePlatform === 'darwin') return 'macos';
+        if (bridgePlatform === 'linux') return 'linux';
+        return 'windows';
+    }
+
+    function selectEngineGuideTab(tabName) {
+        engineTabs.forEach((tab) => {
+            tab.classList.toggle('active', tab.dataset.tab === tabName);
+        });
+        engineTabContents.forEach((panel) => {
+            panel.classList.toggle('hidden', panel.id !== `engine-tab-${tabName}`);
+        });
+    }
+
+    function renderEngineGuideMissingList() {
+        if (!engineModalMissingList) return;
+        if (!engineStatus?.engines) {
+            engineModalMissingList.innerHTML = '<div class="engine-missing-pill warning"><i class="fa-solid fa-circle-question"></i> Engine detection is unavailable</div>';
+            return;
+        }
+
+        const missing = Object.entries(engineStatus.engines).filter(([, info]) => !info.available);
+        if (missing.length === 0) {
+            engineModalMissingList.innerHTML = '<div class="engine-missing-pill ready"><i class="fa-solid fa-circle-check"></i> All local converters are ready</div>';
+            return;
+        }
+
+        engineModalMissingList.innerHTML = missing
+            .map(([name]) => `<div class="engine-missing-pill"><i class="fa-solid fa-triangle-exclamation"></i> ${escapeHtml(name)} missing</div>`)
+            .join('');
+    }
+
+    function openEngineSetupGuide({ startup = false } = {}) {
+        if (!engineModalOverlay) return;
+        if (startup && (!isLibreOfficeMissing() || appSettings.suppressLibreOfficeSetupGuide)) {
+            return;
+        }
+        renderEngineGuideMissingList();
+        selectEngineGuideTab(getPreferredEngineGuideTab());
+        if (engineModalDismissCheckbox) {
+            engineModalDismissCheckbox.checked = !!appSettings.suppressLibreOfficeSetupGuide;
+        }
+        engineModalOverlay.classList.remove('hidden');
+        document.body.classList.add('settings-open');
+    }
+
+    function closeEngineSetupGuide() {
+        if (!engineModalOverlay) return;
+        if (engineModalDismissCheckbox?.checked) {
+            appSettings.suppressLibreOfficeSetupGuide = true;
+            persistSettings();
+        }
+        engineModalOverlay.classList.add('hidden');
+        if (settingsOverlay?.classList.contains('hidden') && notificationsOverlay?.classList.contains('hidden')) {
+            document.body.classList.remove('settings-open');
+        }
     }
 
 
@@ -3506,6 +3592,7 @@ export function initConversion() {
         if (missingEngines.length > 0) {
             showToast(`Some converters are unavailable on this ${getPlatformLabel(engineStatus?.platform)} setup: ${missingEngines.join(', ')}`, 'warning', 6000, { skipNotification: true });
         }
+        openEngineSetupGuide({ startup: true });
 
         if (window.app?.onSystemThemeUpdated) {
             window.app.onSystemThemeUpdated((theme) => {
@@ -3787,7 +3874,7 @@ export function initConversion() {
 
     themeToggle.addEventListener('click', () => {
         applyTheme(document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
-        saveSettings();
+        persistSettings();
     });
 
     settingsToggle.addEventListener('click', openSettings);
@@ -3807,6 +3894,9 @@ export function initConversion() {
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && !settingsOverlay.classList.contains('hidden')) {
             closeSettings();
+        }
+        if (event.key === 'Escape' && engineModalOverlay && !engineModalOverlay.classList.contains('hidden')) {
+            closeEngineSetupGuide();
         }
         if (event.key === 'Escape' && !notificationsOverlay.classList.contains('hidden')) {
             closeNotifications();
@@ -3873,6 +3963,15 @@ export function initConversion() {
     settingsDefaultQuality.addEventListener('input', () => {
         settingsDefaultQualityValue.textContent = `${settingsDefaultQuality.value}%`;
     });
+
+    function normalizeSelectedFiles(files) {
+        return files.map((file) => ({
+            name: file.name,
+            path: file.path || (window.app && window.app.getPathForFile ? window.app.getPathForFile(file) : ''),
+            size: file.size || 0,
+            type: file.type || ''
+        })).filter((file) => file.path);
+    }
 
     uploadZone.addEventListener('click', () => fileInput.click());
     uploadZone.addEventListener('dragover', (event) => {
@@ -3976,7 +4075,7 @@ export function initConversion() {
                 autoDownload: !!appSettings.autoDownloadUpdates
             });
         }
-        saveSettings();
+        persistSettings();
         syncSettingsForm();
         if (outputFolderInput && !outputFolderInput.value) {
             outputFolderInput.value = appSettings.defaultOutputFolder || defaultDownloadsPath || '';
@@ -3989,11 +4088,49 @@ export function initConversion() {
 
     settingsReset.addEventListener('click', () => {
         appSettings = { ...DEFAULT_SETTINGS, defaultOutputFolder: defaultDownloadsPath };
-        saveSettings();
+        persistSettings();
         syncSettingsForm();
         syncSidebarFromScope();
         renderQueue();
         showToast('Settings reset to defaults', 'info');
+    });
+
+    engineSetupGuideBtn?.addEventListener('click', () => openEngineSetupGuide());
+    engineModalClose?.addEventListener('click', closeEngineSetupGuide);
+    engineModalDoneBtn?.addEventListener('click', closeEngineSetupGuide);
+    engineModalOverlay?.addEventListener('click', (event) => {
+        if (event.target === engineModalOverlay) {
+            closeEngineSetupGuide();
+        }
+    });
+
+    engineTabs.forEach((tab) => {
+        tab.addEventListener('click', () => selectEngineGuideTab(tab.dataset.tab));
+    });
+
+    engineCopyButtons.forEach((button) => {
+        button.addEventListener('click', async () => {
+            const command = button.dataset.copy || '';
+            if (!command) return;
+            try {
+                await navigator.clipboard.writeText(command);
+                const originalHtml = button.innerHTML;
+                button.innerHTML = '<i class="fa-solid fa-check"></i>';
+                showToast('Command copied', 'success', 1800, { skipNotification: true });
+                setTimeout(() => { button.innerHTML = originalHtml; }, 1200);
+            } catch {
+                showToast('Copy failed. Select the command text manually.', 'warning', 3000, { skipNotification: true });
+            }
+        });
+    });
+
+    engineDownloadButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            const url = button.dataset.url;
+            if (url) {
+                window.app?.openExternal?.(url);
+            }
+        });
     });
 
     convertBtn.addEventListener('click', () => {

@@ -31,12 +31,22 @@ function getEngineCandidatePaths(...segments) {
         : [devPath, packagedPath];
 }
 
+function getPlatformEngineCandidatePaths(...segments) {
+    const relativeEnginePath = path.join(...segments);
+    const devPath = path.join(DEV_ENGINES_ROOT, PLATFORM, relativeEnginePath);
+    const packagedPath = path.join(PROD_ENGINES_ROOT, relativeEnginePath);
+
+    return IS_PACKAGED
+        ? [packagedPath, devPath]
+        : [devPath, packagedPath];
+}
+
 const ENGINE_DEFINITIONS = {
     ffmpeg: {
         probeArgs: ['-version'],
         candidates: PLATFORM === 'win32'
             ? [...getEngineCandidatePaths('ffmpeg.exe'), 'ffmpeg.exe', 'ffmpeg']
-            : ['ffmpeg', '/opt/homebrew/bin/ffmpeg', '/usr/local/bin/ffmpeg', '/usr/bin/ffmpeg']
+            : [...getPlatformEngineCandidatePaths('ffmpeg'), ...getEngineCandidatePaths('ffmpeg'), 'ffmpeg', '/opt/homebrew/bin/ffmpeg', '/usr/local/bin/ffmpeg', '/usr/bin/ffmpeg']
     },
     libreoffice: {
         probeArgs: ['--version'],
@@ -56,7 +66,23 @@ const ENGINE_DEFINITIONS = {
         probeArgs: ['--help'],
         candidates: PLATFORM === 'win32'
             ? [...getEngineCandidatePaths('7zip', '7za.exe'), '7za.exe', '7z.exe']
-            : ['7z', '7za', '/usr/bin/7z', '/usr/local/bin/7z', '/opt/homebrew/bin/7z']
+            : [
+                ...getPlatformEngineCandidatePaths('7zip', '7zz'),
+                ...getPlatformEngineCandidatePaths('7zip', '7z'),
+                ...getPlatformEngineCandidatePaths('7zip', '7za'),
+                ...getEngineCandidatePaths('7zip', '7zz'),
+                ...getEngineCandidatePaths('7zip', '7z'),
+                ...getEngineCandidatePaths('7zip', '7za'),
+                '7zz',
+                '7z',
+                '7za',
+                '/usr/bin/7zz',
+                '/usr/bin/7z',
+                '/usr/local/bin/7zz',
+                '/usr/local/bin/7z',
+                '/opt/homebrew/bin/7zz',
+                '/opt/homebrew/bin/7z'
+            ]
     }
 };
 const resolvedEngineExecutables = new Map();
@@ -270,8 +296,17 @@ function registerActiveProcess(controller, proc) {
         return () => {};
     }
 
+    if (global.activeChildProcesses) {
+        global.activeChildProcesses.add(proc);
+    }
+
     controller.activeProcesses.add(proc);
-    const cleanup = () => controller.activeProcesses.delete(proc);
+    const cleanup = () => {
+        controller.activeProcesses.delete(proc);
+        if (global.activeChildProcesses) {
+            global.activeChildProcesses.delete(proc);
+        }
+    };
     proc.once('close', cleanup);
     proc.once('exit', cleanup);
 

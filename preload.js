@@ -114,6 +114,9 @@ const appBridge = {
     // History IPC
     getHistory: () => ipcRenderer.invoke('get-history'),
     clearHistory: () => ipcRenderer.invoke('clear-history'),
+    onHistoryUpdated: (callback) => {
+        ipcRenderer.on('history-updated', () => callback());
+    },
 
     // Presets IPC
     getPresets: () => ipcRenderer.invoke('get-presets'),

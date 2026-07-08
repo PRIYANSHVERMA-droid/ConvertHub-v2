@@ -3,14 +3,27 @@
   "version": "2.3.0",
   "description": "ConvertHub v2 - Universal File Converter",
   "main": "main.js",
-  "author": "Priyansh Verma",
+  "author": {
+    "name": "Priyansh Verma",
+    "email": "contact@converthub.app"
+  },
   "license": "MIT",
   "type": "commonjs",
   "scripts": {
     "start": "electron .",
     "dev": "electron .",
     "build": "electron-builder",
-    "dist": "electron-builder --win --x64"
+    "dist": "electron-builder --win --x64",
+    "prepare-engines:mac": "node scripts/prepare-engines.js darwin",
+    "prepare-engines:linux": "node scripts/prepare-engines.js linux",
+    "prepare-engines:all": "node scripts/prepare-engines.js all",
+    "dist:win": "electron-builder --win --x64",
+    "dist:mac": "electron-builder --mac",
+    "dist:linux": "node scripts/build-linux.js",
+    "dist:all": "electron-builder --win --mac --linux",
+    "predist:mac": "npm run prepare-engines:mac",
+    "predist:linux": "npm run prepare-engines:linux",
+    "predist:all": "npm run prepare-engines:all"
   },
   "devDependencies": {
     "electron": "^41.3.0",
@@ -24,19 +37,87 @@
       "output": "dist"
     },
     "files": [
-      "**/*"
-    ],
-    "extraResources": [
-      {
-        "from": "engines",
-        "to": "engines"
-      }
+      "**/*",
+      "!engines/ffmpeg",
+      "!engines/ffmpeg.exe",
+      "!engines/7zip/**",
+      "!engines/darwin/**",
+      "!engines/linux/**",
+      "!engines/libreoffice/**"
     ],
     "win": {
       "target": "nsis",
       "icon": "assets/app-icon.ico",
       "artifactName": "ConvertHub-v2-Setup-${version}.${ext}",
-      "verifyUpdateCodeSignature": true
+      "verifyUpdateCodeSignature": true,
+      "extraResources": [
+        {
+          "from": "engines",
+          "to": "engines",
+          "filter": [
+            "ffmpeg.exe",
+            "7zip/**/*",
+            "libreoffice/**/*",
+            "imageProcessor.js"
+          ]
+        }
+      ]
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "assets/app-icon.ico",
+      "artifactName": "ConvertHub-v2-${version}.${ext}",
+      "category": "public.app-category.utilities",
+      "extraResources": [
+        {
+          "from": "engines/darwin",
+          "to": "engines",
+          "filter": [
+            "ffmpeg",
+            "7zip/7zz",
+            "7zip/7z",
+            "7zip/7za"
+          ]
+        },
+        {
+          "from": "engines",
+          "to": "engines",
+          "filter": [
+            "imageProcessor.js"
+          ]
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "assets/app-icon.png",
+      "artifactName": "ConvertHub-v2-${version}.${ext}",
+      "category": "Utility",
+      "extraResources": [
+        {
+          "from": "engines/linux",
+          "to": "engines",
+          "filter": [
+            "ffmpeg",
+            "7zip/7zz",
+            "7zip/7z",
+            "7zip/7za"
+          ]
+        },
+        {
+          "from": "engines",
+          "to": "engines",
+          "filter": [
+            "imageProcessor.js"
+          ]
+        }
+      ]
     },
     "nsis": {
       "oneClick": false,

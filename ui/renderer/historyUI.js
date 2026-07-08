@@ -95,17 +95,21 @@ export async function loadRecentFiles() {
 export function initHistory() {
     const clearRecentBtn = document.getElementById('clear-recent-btn');
     clearRecentBtn?.addEventListener('click', async () => {
-        if (confirm('Are you sure you want to clear your conversion history?')) {
-            try {
-                const success = await window.app.clearHistory();
-                if (success) {
-                    loadRecentFiles();
-                    showToast('History cleared.', 'info');
-                }
-            } catch (err) {
-                console.error('[renderer] Failed to clear history:', err);
-                showToast('Failed to clear history.', 'error');
+        try {
+            const success = await window.app.clearHistory();
+            if (success) {
+                loadRecentFiles();
+                showToast('History cleared.', 'info');
             }
+        } catch (err) {
+            console.error('[renderer] Failed to clear history:', err);
+            showToast('Failed to clear history.', 'error');
         }
     });
+
+    if (window.app?.onHistoryUpdated) {
+        window.app.onHistoryUpdated(() => {
+            loadRecentFiles();
+        });
+    }
 }

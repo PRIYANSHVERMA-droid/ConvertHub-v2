@@ -78,15 +78,37 @@ function waitForTurn(jobId, signal) {
     });
 }
 
-/**
- * Resolves the path to the bundled FFmpeg executable.
- * @returns {string} Absolute path to ffmpeg.exe
- */
 function getFFmpegPath() {
     const isDev = !app.isPackaged;
-    return isDev
-        ? path.join(__dirname, '..', 'engines', 'ffmpeg.exe')
-        : path.join(process.resourcesPath, 'engines', 'ffmpeg.exe');
+    const platform = process.platform;
+
+    if (platform === 'win32') {
+        const localPath = isDev
+            ? path.join(__dirname, '..', 'engines', 'ffmpeg.exe')
+            : path.join(process.resourcesPath, 'engines', 'ffmpeg.exe');
+        return fs.existsSync(localPath) ? localPath : 'ffmpeg';
+    } else {
+        const localPath = isDev
+            ? path.join(__dirname, '..', 'engines', 'ffmpeg')
+            : path.join(process.resourcesPath, 'engines', 'ffmpeg');
+        if (fs.existsSync(localPath)) {
+            return localPath;
+        }
+
+        // Common system candidates
+        const candidates = [
+            '/opt/homebrew/bin/ffmpeg',
+            '/usr/local/bin/ffmpeg',
+            '/usr/bin/ffmpeg',
+            '/bin/ffmpeg'
+        ];
+        for (const candidate of candidates) {
+            if (fs.existsSync(candidate)) {
+                return candidate;
+            }
+        }
+        return 'ffmpeg';
+    }
 }
 
 /**
@@ -180,11 +202,16 @@ function terminateChildProcess(proc) {
 function spawnFfmpeg(args, onProgress, signal, initialDurationSecs = null) {
     return new Promise((resolve, reject) => {
         const ffmpegPath = getFFmpegPath();
-        if (!fs.existsSync(ffmpegPath)) {
+        if (path.isAbsolute(ffmpegPath) && !fs.existsSync(ffmpegPath)) {
             return reject(new Error(`FFmpeg executable not found at: ${ffmpegPath}`));
         }
 
         const proc = spawn(ffmpegPath, args, { windowsHide: true });
+        if (global.activeChildProcesses) {
+            global.activeChildProcesses.add(proc);
+            proc.on('close', () => global.activeChildProcesses.delete(proc));
+            proc.on('exit', () => global.activeChildProcesses.delete(proc));
+        }
         let stderrTail = '';
         let lastProgressTime = 0;
         let durationSecs = initialDurationSecs;
@@ -528,6 +555,11 @@ function getMediaInfo(filePath) {
             }
 
             const proc = spawn(ffmpegExecutable, ['-i', safePath], { windowsHide: true });
+            if (global.activeChildProcesses) {
+                global.activeChildProcesses.add(proc);
+                proc.on('close', () => global.activeChildProcesses.delete(proc));
+                proc.on('exit', () => global.activeChildProcesses.delete(proc));
+            }
             let stderr = '';
             proc.stderr.on('data', (chunk) => {
                 stderr += chunk.toString();

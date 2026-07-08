@@ -5,6 +5,8 @@ const os = require('os');
 const { pathToFileURL } = require('url');
 const { initUpdater } = require('./core/updater');
 
+global.activeChildProcesses = new Set();
+
 // Register custom protocol as privileged to allow video streaming and fetching
 protocol.registerSchemesAsPrivileged([
     {
@@ -427,7 +429,7 @@ app.whenReady().then(() => {
     ipcMain.handle('get-default-output', () => app.getPath('downloads'));
     ipcMain.handle('get-app-version', () => app.getVersion());
     ipcMain.handle('open-external', (event, url) => {
-        const allowedDomains = ['github.com', 'ffmpeg.org', 'libreoffice.org', '7-zip.org'];
+        const allowedDomains = ['github.com', 'ffmpeg.org', 'libreoffice.org', '7-zip.org', 'evermeet.cx', 'johnvansickle.com'];
         try {
             const parsed = new URL(url);
             if (allowedDomains.some(d => parsed.hostname === d || parsed.hostname.endsWith('.' + d))) {
@@ -704,9 +706,15 @@ app.whenReady().then(() => {
     // Register global history listener once app is ready
     const manager = getConversionManager();
     manager.conversionEvents.on('job-complete', (record) => {
-        getHistoryStore().appendJob(record).catch(err =>
-            console.error('[main] Failed to append job to history:', err)
-        );
+        getHistoryStore().appendJob(record)
+            .then(() => {
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.webContents.send('history-updated');
+                }
+            })
+            .catch(err =>
+                console.error('[main] Failed to append job to history:', err)
+            );
         if (!desktopNotificationsEnabled || !mainWindow || mainWindow.isDestroyed()) return;
         if (mainWindow.isFocused()) {
             mainWindow.webContents.send('conversion-complete-focused', record);
@@ -736,6 +744,23 @@ nativeTheme.on('updated', () => {
 });
 
 app.on('will-quit', () => {
+    // Kill any active child processes
+    if (global.activeChildProcesses) {
+        const { spawn } = require('child_process');
+        for (const proc of global.activeChildProcesses) {
+            try {
+                if (process.platform === 'win32') {
+                    spawn('taskkill', ['/PID', String(proc.pid), '/T', '/F'], { windowsHide: true });
+                } else {
+                    process.kill(-proc.pid, 'SIGKILL');
+                }
+            } catch (e) {
+                try { proc.kill('SIGKILL'); } catch (_) {}
+            }
+        }
+        global.activeChildProcesses.clear();
+    }
+
     try {
         const tempDir = os.tmpdir();
         const files = fs.readdirSync(tempDir);
