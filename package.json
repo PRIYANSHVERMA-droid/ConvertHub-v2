@@ -68,7 +68,7 @@
         "dmg",
         "zip"
       ],
-      "icon": "assets/app-icon.ico",
+      "icon": "assets/app-icon.png",
       "artifactName": "ConvertHub-v2-${version}.${ext}",
       "category": "public.app-category.utilities",
       "extraResources": [
