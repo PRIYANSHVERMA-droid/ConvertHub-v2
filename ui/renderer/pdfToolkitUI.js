@@ -1,6 +1,7 @@
-import { state, escapeHtml, truncateName, getIconForFormat, getFolderFromPath, formatSize } from './state.js';
+import { state, escapeHtml, truncateName, getIconForFormat, getFolderFromPath, formatSize, formatBytes } from './state.js';
 import { showToast } from './notifications.js';
 import { refreshRecentFiles } from './historyUI.js';
+import { setBatchStatus } from './conversionUI.js';
 
 import * as pdfjsLib from '../../node_modules/pdfjs-dist/build/pdf.mjs';
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
@@ -173,20 +174,17 @@ export function initPDFToolkit() {
     const appSettings = state.appSettings;
 
 
-    function getImageDimensions(file) {
+    function getImageDimensionsFromUrl(url) {
         return new Promise((resolve) => {
-            const src = URL.createObjectURL(file);
+            if (!url) return resolve({ width: 0, height: 0 });
             const image = new Image();
             image.onload = () => {
-                const dimensions = { width: image.naturalWidth || 0, height: image.naturalHeight || 0 };
-                URL.revokeObjectURL(src);
-                resolve(dimensions);
+                resolve({ width: image.naturalWidth || 0, height: image.naturalHeight || 0 });
             };
             image.onerror = () => {
-                URL.revokeObjectURL(src);
                 resolve({ width: 0, height: 0 });
             };
-            image.src = src;
+            image.src = url;
         });
     }
 
@@ -371,6 +369,9 @@ export function initPDFToolkit() {
 
         pdfImgCount.textContent = String(pdfImages.length);
         pdfImageGridSection.classList.toggle('hidden', pdfImages.length === 0);
+        if (pdfImgDropzone) {
+            pdfImgDropzone.classList.toggle('hidden', pdfImages.length > 0);
+        }
         pdfThumbnailsGrid.innerHTML = '';
 
         pdfImages.forEach((item, index) => {
@@ -389,6 +390,16 @@ export function initPDFToolkit() {
                 <button class="thumb-act-btn drag-btn" title="Drag to reorder"><i class="fa-solid fa-grip-vertical"></i></button>
                 <button class="thumb-act-btn remove-btn" title="Remove image"><i class="fa-solid fa-xmark"></i></button>
             `;
+
+            const imgEl = card.querySelector('.thumb-preview-wrap img');
+            if (imgEl) {
+                imgEl.onerror = () => {
+                    const wrap = imgEl.parentNode;
+                    if (wrap) {
+                        wrap.innerHTML = '<div class="file-type-icon image" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(239,68,68,0.15);color:#f87171;font-size:22px;border-radius:6px;"><i class="fa-regular fa-image"></i></div>';
+                    }
+                };
+            }
 
             card.addEventListener('dragstart', () => {
                 pdfImageDragId = item.id;
@@ -421,7 +432,7 @@ export function initPDFToolkit() {
                 renderPdfImageList();
             });
             card.querySelector('.remove-btn')?.addEventListener('click', () => {
-                if (item.previewUrl.startsWith('blob:')) {
+                if (item.previewUrl && item.previewUrl.startsWith('blob:')) {
                     URL.revokeObjectURL(item.previewUrl);
                 }
                 pdfImages = pdfImages.filter((entry) => entry.id !== item.id);
@@ -442,11 +453,10 @@ export function initPDFToolkit() {
         
         for (const file of filesArray) {
             const filePath = file.path || (window.app?.getPathForFile ? window.app.getPathForFile(file) : '');
-            if (!filePath) continue;
             
             // Check if it's a directory by running the directory scanner helper
             let isDir = false;
-            if (window.app?.readFolderImages) {
+            if (filePath && window.app?.readFolderImages) {
                 try {
                     const scanRes = await window.app.readFolderImages(filePath);
                     if (scanRes && scanRes.success && scanRes.files && scanRes.files.length > 0) {
@@ -481,17 +491,18 @@ export function initPDFToolkit() {
             let previewUrl = '';
             
             if (file.raw) {
-                dimensions = await getImageDimensions(file.raw);
                 previewUrl = URL.createObjectURL(file.raw);
-            } else {
+                dimensions = await getImageDimensionsFromUrl(previewUrl);
+            } else if (file.path) {
                 previewUrl = `converthub-media://local-file/?path=${encodeURIComponent(file.path)}`;
-                dimensions = await getImageDimensionsFromPath(file.path);
+                dimensions = await getImageDimensionsFromUrl(previewUrl);
             }
             
             return {
                 id: `pdf-img-${pdfImageIdCounter++}`,
+                raw: file.raw,
                 name: file.name,
-                path: file.path,
+                path: file.path || '',
                 size: file.size,
                 width: dimensions.width,
                 height: dimensions.height,
@@ -525,6 +536,9 @@ export function initPDFToolkit() {
 
         pdfMergeCount.textContent = String(pdfMergeFiles.length);
         pdfMergeListSection.classList.toggle('hidden', pdfMergeFiles.length === 0);
+        if (pdfMergeDropzone) {
+            pdfMergeDropzone.classList.toggle('hidden', pdfMergeFiles.length > 0);
+        }
         pdfMergeList.innerHTML = '';
 
         pdfMergeFiles.forEach((item, index) => {
@@ -842,16 +856,31 @@ export function initPDFToolkit() {
 
         let progressHandler = null;
         let progressCleanup = null;
+        const compileStartTime = Date.now();
 
         try {
             if (window.app?.onProgress) {
                 progressHandler = (data) => {
                     if (data && typeof data.percent === 'number') {
+                        const percent = Math.min(100, Math.max(0, Math.round(data.percent)));
+                        const elapsedSec = (Date.now() - compileStartTime) / 1000;
+                        let etaText = '';
+                        if (percent > 5 && percent < 100 && elapsedSec > 0.5) {
+                            const totalEstSec = (elapsedSec / percent) * 100;
+                            const remainingSec = Math.max(1, Math.round(totalEstSec - elapsedSec));
+                            const mins = Math.floor(remainingSec / 60);
+                            const secs = remainingSec % 60;
+                            etaText = mins > 0 ? ` • ~${mins}m ${secs}s left` : ` • ~${secs}s left`;
+                        }
+                        const statusMsg = `${data.message || `${percent}% complete`}${etaText}`;
                         setBatchStatus({
                             title: 'Compiling PDF',
-                            meta: data.message || `${Math.round(data.percent)}% complete`,
-                            percent: data.percent
+                            meta: statusMsg,
+                            percent: percent
                         });
+                        if (pdfCompileBtn) {
+                            pdfCompileBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${percent}% (${data.message || 'Processing'})${etaText}`;
+                        }
                     }
                 };
                 progressCleanup = window.app.onProgress(progressHandler);
@@ -1131,16 +1160,14 @@ export function initPDFToolkit() {
             return;
         }
 
-        const existingPaths = new Set(pdfMergeFiles.map((file) => String(file.path || '').toLowerCase()).filter(Boolean));
+        const existingKeys = new Set(pdfMergeFiles.map((file) => String(file.path || file.name || '').toLowerCase()).filter(Boolean));
         const uniqueFiles = selectedFiles.filter((file) => {
-            if (!file.path) {
+            const key = String(file.path || file.name || '').toLowerCase();
+            if (!key) return false;
+            if (existingKeys.has(key)) {
                 return false;
             }
-            const normalizedPath = file.path.toLowerCase();
-            if (existingPaths.has(normalizedPath)) {
-                return false;
-            }
-            existingPaths.add(normalizedPath);
+            existingKeys.add(key);
             return true;
         });
 
@@ -1153,9 +1180,8 @@ export function initPDFToolkit() {
             id: `pdf-merge-${pdfMergeIdCounter++}`,
             raw: file.raw,
             name: file.name,
-            path: file.path,
-            size: file.size
-            ,
+            path: file.path || '',
+            size: file.size,
             range: ''
         }));
 

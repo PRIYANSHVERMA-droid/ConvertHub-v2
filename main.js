@@ -285,11 +285,11 @@ app.whenReady().then(() => {
     // Register custom protocol handler with support for Range requests and fs.createReadStream
     protocol.handle('converthub-media', async (request) => {
         try {
-            const url = new URL(request.url);
-            const filePath = url.searchParams.get('path');
-            if (!filePath) return new Response('Path missing', { status: 400 });
+            const rawPath = url.searchParams.get('path');
+            if (!rawPath) return new Response('Path missing', { status: 400 });
             
-            const resolvedPath = path.resolve(filePath);
+            const decodedPath = decodeURIComponent(rawPath);
+            const resolvedPath = path.resolve(decodedPath);
             const ext = path.extname(resolvedPath).toLowerCase();
             const allowedExts = ['.png', '.jpg', '.jpeg', '.webp', '.bmp', '.gif', '.pdf', '.mp3', '.wav', '.ogg', '.aac', '.mp4', '.mkv', '.webm', '.mov'];
             if (!allowedExts.includes(ext)) {

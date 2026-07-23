@@ -94,8 +94,12 @@ const appBridge = {
     openFolderDialog: () => ipcRenderer.invoke('select-output-folder'),
     getDefaultOutput: () => ipcRenderer.invoke('get-default-output'),
     getPathForFile: (file) => {
+        if (!file) return '';
+        if (typeof file.path === 'string' && file.path) {
+            return file.path;
+        }
         try {
-            return webUtils.getPathForFile(file);
+            return webUtils.getPathForFile(file) || '';
         } catch {
             return '';
         }
